@@ -1,8 +1,8 @@
-# Spatial Transcriptomic Brain Area Annotation Using Transformers
-
-A deep learning framework for annotating brain regions using spatial transcriptomic data. This project implements a hierarchical transformer architecture that leverages spatial proximity of cells to improve brain area classification accuracy.
+# TissueFormer: a neural network for labeling tissue from grouped single-cell RNA profiles
 
 If you are interested in just the TissueFormer architecture, please consult the source code in `model.py`.
+
+## Brain area annotation specific information
 
 ## Overview
 
