@@ -48,7 +48,7 @@ def create_model(config: DictConfig, class_weights=None):
     """Create model based on config."""
     class_weights_list = class_weights.tolist() if class_weights is not None else None
 
-    bert_path = os.path.expanduser(bert_path)
+    bert_path = os.path.expanduser(config.model.bert_path_or_name)
 
     if config.model.pretrained_type == "single-cell":
         model = BertForSequenceClassification.from_pretrained(
