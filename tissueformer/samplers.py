@@ -1419,8 +1419,9 @@ class DonorGroupSampler(Sampler):
     In training mode (iterate_all_donors=False): randomly picks donors and samples
     group_size cells from each donor. Repeats for num_samples // group_size groups.
 
-    In eval mode (iterate_all_donors=True): iterates through each donor once,
-    sampling group_size cells per donor for donor-level predictions.
+    In eval mode (iterate_all_donors=True): creates ceil(n_cells / group_size)
+    groups per donor, using ALL cells. The last group is padded with replacement
+    sampling if needed. Tracks group-to-donor mapping via get_eval_donor_group_counts().
 
     For group_size=1: falls back to standard random sampling (no grouping).
     """
@@ -1442,6 +1443,7 @@ class DonorGroupSampler(Sampler):
         self.seed = seed
         self.iterate_all_donors = iterate_all_donors
         self.epoch = 0
+        self._eval_donor_group_counts: Dict[str, int] = {}
 
         # Build donor -> cell indices mapping
         donor_ids = np.array(dataset[donor_key])
@@ -1466,7 +1468,10 @@ class DonorGroupSampler(Sampler):
         if num_samples is not None:
             self.num_samples = num_samples
         elif iterate_all_donors:
-            self.num_samples = len(self.donors) * group_size
+            self.num_samples = sum(
+                math.ceil(len(idx) / group_size) * group_size
+                for idx in self.donor_to_indices.values()
+            )
         else:
             self.num_samples = len(dataset)
 
@@ -1482,6 +1487,35 @@ class DonorGroupSampler(Sampler):
         replace = len(indices) < self.group_size
         return rng.choice(indices, size=self.group_size, replace=replace)
 
+    def _sample_all_groups_from_donor(self, donor: str, rng: np.random.RandomState) -> np.ndarray:
+        """Create ceil(n_cells / group_size) groups using all cells from a donor.
+
+        Shuffles cells, chunks into groups of group_size. The last chunk is
+        padded with replacement sampling if it has fewer than group_size cells.
+        Returns a flat array of indices (contiguous blocks of group_size).
+        """
+        indices = self.donor_to_indices[donor]
+        shuffled = rng.permutation(indices)
+        n_groups = math.ceil(len(shuffled) / self.group_size)
+
+        all_indices = []
+        for i in range(n_groups):
+            start = i * self.group_size
+            end = start + self.group_size
+            chunk = shuffled[start:end]
+            if len(chunk) < self.group_size:
+                # Pad with replacement sampling from donor's full pool
+                pad_size = self.group_size - len(chunk)
+                pad = rng.choice(indices, size=pad_size, replace=True)
+                chunk = np.concatenate([chunk, pad])
+            all_indices.append(chunk)
+
+        return np.concatenate(all_indices)
+
+    def get_eval_donor_group_counts(self) -> Dict[str, int]:
+        """Return mapping of donor -> number of groups created during eval iteration."""
+        return self._eval_donor_group_counts
+
     def __iter__(self) -> Iterator[int]:
         rng = np.random.RandomState(self.seed + self.epoch)
 
@@ -1492,11 +1526,14 @@ class DonorGroupSampler(Sampler):
             return
 
         if self.iterate_all_donors:
-            # Eval mode: one group per donor, deterministic order
+            # Eval mode: all groups per donor, deterministic order
             donor_order = sorted(self.donors)
+            self._eval_donor_group_counts = {}
             for donor in donor_order:
-                cell_indices = self._sample_cells_from_donor(donor, rng)
-                yield from cell_indices.tolist()
+                all_indices = self._sample_all_groups_from_donor(donor, rng)
+                n_groups = len(all_indices) // self.group_size
+                self._eval_donor_group_counts[donor] = n_groups
+                yield from all_indices.tolist()
         else:
             # Train mode: random donor selection
             num_groups = self.num_samples // self.group_size
@@ -1603,6 +1640,7 @@ class GroupedDonorTrainer(Trainer):
             seed=42,
             iterate_all_donors=True,
         )
+        self._test_sampler = sampler
 
         dataloader_params = {
             "batch_size": self.args.eval_batch_size,
@@ -1620,7 +1658,12 @@ class GroupedDonorTrainer(Trainer):
         self, test_dataset: Dataset, ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "test",
     ) -> PredictionOutput:
-        """Predict with donor-level grouping and index tracking."""
+        """Predict with donor-level grouping and index tracking.
+
+        Returns:
+            Tuple of (PredictionOutput, ordered_indices, group_donor_ids) where
+            group_donor_ids maps each group prediction to its donor.
+        """
         if self.donor_group_size == 1:
             return super().predict(test_dataset, ignore_keys=ignore_keys,
                                    metric_key_prefix=metric_key_prefix)
@@ -1670,8 +1713,15 @@ class GroupedDonorTrainer(Trainer):
             label_ids = output.label_ids[::self.donor_group_size]
         ordered_indices = ordered_indices[::self.donor_group_size]
 
+        # Build group-to-donor mapping from sampler
+        group_donor_ids = []
+        donor_group_counts = self._test_sampler.get_eval_donor_group_counts()
+        for donor in sorted(donor_group_counts.keys()):
+            group_donor_ids.extend([donor] * donor_group_counts[donor])
+        group_donor_ids = np.array(group_donor_ids)
+
         return PredictionOutput(
             predictions=preds,
             label_ids=label_ids,
             metrics=output.metrics,
-        ), ordered_indices
+        ), ordered_indices, group_donor_ids

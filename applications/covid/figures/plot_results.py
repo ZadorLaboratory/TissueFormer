@@ -2,8 +2,9 @@
 Manuscript-quality figures for COVID severity classification results.
 
 Produces:
-  1. Main figure: Accuracy and AUROC vs group_size for TissueFormer + benchmarks
-  2. Supplementary: Confusion matrices, ROC curves, cell-type composition
+  1. Main figure: Group accuracy, donor accuracy, and donor AUROC vs group_size
+     for TissueFormer + benchmarks
+  2. Supplementary: Confusion matrices
 """
 
 import os
@@ -46,23 +47,37 @@ METHODS = {
     "logistic_regression_cell_type_histogram": {"color": "#F44336", "marker": "v", "label": "LR (cell type)"},
 }
 
+# Metric rows to plot: (row_label, metric_key_extractor)
+# Each extractor takes a metrics dict and returns the value or None.
+METRIC_ROWS = [
+    ("Group Accuracy", "group_accuracy"),
+    ("Donor Accuracy\n(mean logits)", "donor_meanlogits_accuracy"),
+    ("Donor AUROC\n(mean logits)", "donor_meanlogits_auroc"),
+]
+
 
 def load_results(results_dir: str) -> dict:
     """
     Load all result JSON files from the results directory.
+
+    Handles two formats:
+    - Benchmark results: have classifier_type + feature_type fields,
+      metrics stored in 'metrics' dict
+    - TissueFormer results: have method='tissueformer',
+      metrics stored in 'group_metrics', 'donor_majority_metrics',
+      'donor_meanlogits_metrics' dicts
+
     Returns nested dict: results[dataset][method][group_size][fold] = metrics
+    where metrics is a flat dict with keys like 'group_accuracy',
+    'donor_meanlogits_accuracy', 'donor_meanlogits_auroc', etc.
     """
     results = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
 
     for path in glob.glob(os.path.join(results_dir, "**/*_results.json"), recursive=True):
         with open(path) as f:
             data = json.load(f)
-        # Parse from path or data
-        metrics = data.get("metrics", {})
+
         gs = data.get("group_size", "unknown")
-        clf = data.get("classifier_type", "unknown")
-        feat = data.get("feature_type", "unknown")
-        method = f"{clf}_{feat}"
 
         # Try to infer dataset and fold from directory structure
         parts = path.split(os.sep)
@@ -78,26 +93,51 @@ def load_results(results_dir: str) -> dict:
                 except ValueError:
                     pass
 
-        if dataset:
+        if not dataset:
+            continue
+
+        if data.get("method") == "tissueformer":
+            # TissueFormer result with multi-level metrics
+            metrics = {}
+            for sub_key in ("group_metrics", "donor_majority_metrics", "donor_meanlogits_metrics"):
+                sub = data.get(sub_key, {})
+                metrics.update(sub)
+            results[dataset]["tissueformer"][gs][fold] = metrics
+        else:
+            # Benchmark result — store with donor_ prefix for consistency
+            raw_metrics = data.get("metrics", {})
+            metrics = {}
+            for k, v in raw_metrics.items():
+                # Benchmark metrics have prefix like "random_forest_pseudobulk_gsN_accuracy"
+                # Extract the metric name (last part after the gs prefix)
+                suffix = k.rsplit("_", 1)[-1] if "_" in k else k
+                metrics[f"donor_meanlogits_{suffix}"] = v
+
+            clf = data.get("classifier_type", "unknown")
+            feat = data.get("feature_type", "unknown")
+            method = f"{clf}_{feat}"
             results[dataset][method][gs][fold] = metrics
 
     return dict(results)
 
 
-def _aggregate_across_folds(fold_dict):
-    """Aggregate metrics across folds: return mean and std."""
-    if not fold_dict:
-        return None, None
-    values = list(fold_dict.values())
-    return np.mean(values), np.std(values)
+def _extract_metric_values(fold_metrics, metric_key):
+    """Extract values for a metric key across folds."""
+    values = []
+    for fold, metrics in fold_metrics.items():
+        if metric_key in metrics:
+            values.append(metrics[metric_key])
+    return values
 
 
 def plot_accuracy_auroc_vs_groupsize(results, output_dir):
     """
-    Main figure: accuracy and AUROC vs group_size (log scale).
-    One column per dataset, two rows (accuracy, auroc).
+    Main figure: group accuracy, donor accuracy, and donor AUROC vs group_size.
+    One column per dataset, three rows.
     """
-    fig, axes = plt.subplots(2, len(DATASETS), figsize=(4 * len(DATASETS), 6),
+    n_rows = len(METRIC_ROWS)
+    fig, axes = plt.subplots(n_rows, len(DATASETS),
+                             figsize=(4 * len(DATASETS), 3 * n_rows),
                              sharex=True, squeeze=False)
 
     for col, dataset in enumerate(DATASETS):
@@ -111,73 +151,48 @@ def plot_accuracy_auroc_vs_groupsize(results, output_dir):
                 continue
 
             gs_data = ds_results[method_key]
-            x_vals, acc_means, acc_stds = [], [], []
-            auroc_means, auroc_stds = [], []
 
-            for gs in GROUP_SIZES:
-                gs_str = str(gs)
-                if gs_str not in gs_data:
-                    continue
+            for row, (row_label, metric_key) in enumerate(METRIC_ROWS):
+                x_vals, means, stds = [], [], []
 
-                fold_metrics = gs_data[gs_str]
-                # Extract accuracy
-                acc_values = []
-                auroc_values = []
-                for fold, metrics in fold_metrics.items():
-                    # Find accuracy key
-                    for k, v in metrics.items():
-                        if "accuracy" in k:
-                            acc_values.append(v)
-                        if "auroc" in k:
-                            auroc_values.append(v)
+                for gs in GROUP_SIZES:
+                    gs_str = str(gs)
+                    if gs_str not in gs_data:
+                        continue
 
-                if acc_values:
-                    x_vals.append(gs)
-                    acc_means.append(np.mean(acc_values))
-                    acc_stds.append(np.std(acc_values))
-                if auroc_values:
-                    auroc_means.append(np.mean(auroc_values))
-                    auroc_stds.append(np.std(auroc_values))
+                    values = _extract_metric_values(gs_data[gs_str], metric_key)
+                    if values:
+                        x_vals.append(gs)
+                        means.append(np.mean(values))
+                        stds.append(np.std(values))
 
-            if x_vals:
-                axes[0, col].errorbar(
-                    x_vals, acc_means, yerr=acc_stds,
-                    color=style["color"], marker=style["marker"],
-                    label=style["label"], capsize=3, linewidth=1.5, markersize=5
-                )
-            if auroc_means and len(auroc_means) == len(x_vals):
-                axes[1, col].errorbar(
-                    x_vals, auroc_means, yerr=auroc_stds,
-                    color=style["color"], marker=style["marker"],
-                    label=style["label"], capsize=3, linewidth=1.5, markersize=5
-                )
+                if x_vals:
+                    axes[row, col].errorbar(
+                        x_vals, means, yerr=stds,
+                        color=style["color"], marker=style["marker"],
+                        label=style["label"], capsize=3, linewidth=1.5, markersize=5
+                    )
 
-            # Plot whole-donor benchmark as horizontal line
-            if "all" in gs_data:
-                for fold, metrics in gs_data["all"].items():
-                    for k, v in metrics.items():
-                        if "accuracy" in k:
-                            axes[0, col].axhline(
-                                y=v, color=style["color"], linestyle="--",
-                                alpha=0.5, linewidth=1
-                            )
-                        if "auroc" in k:
-                            axes[1, col].axhline(
+                # Plot whole-donor benchmark as horizontal line
+                if "all" in gs_data:
+                    values = _extract_metric_values(gs_data["all"], metric_key)
+                    if values:
+                        for v in values:
+                            axes[row, col].axhline(
                                 y=v, color=style["color"], linestyle="--",
                                 alpha=0.5, linewidth=1
                             )
 
         axes[0, col].set_title(DATASET_LABELS.get(dataset, dataset))
-        axes[1, col].set_xlabel("Group size")
-        axes[0, col].set_xscale("log", base=2)
-        axes[1, col].set_xscale("log", base=2)
+        axes[-1, col].set_xlabel("Group size")
 
-        for row in range(2):
+        for row in range(n_rows):
+            axes[row, col].set_xscale("log", base=2)
             axes[row, col].xaxis.set_major_formatter(ScalarFormatter())
             axes[row, col].grid(True, alpha=0.3)
 
-    axes[0, 0].set_ylabel("Accuracy")
-    axes[1, 0].set_ylabel("AUROC")
+    for row, (row_label, _) in enumerate(METRIC_ROWS):
+        axes[row, 0].set_ylabel(row_label)
 
     # Single legend at top
     handles, labels = axes[0, 0].get_legend_handles_labels()

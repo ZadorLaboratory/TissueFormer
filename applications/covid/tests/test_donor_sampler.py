@@ -84,11 +84,42 @@ class TestDonorGroupSampler:
             iterate_all_donors=True
         )
         indices = list(sampler)
-        # Should have 2 donors * 8 = 16 indices
-        assert len(indices) == 16
+        # big_donor: ceil(100/8)*8 = 104, small_donor: ceil(3/8)*8 = 8
+        assert len(indices) == 104 + 8
+
+    def test_eval_mode_uses_all_cells(self, dataset):
+        """iterate_all_donors=True should create multiple groups per donor using all cells."""
+        group_size = 8
+        cells_per_donor = 100  # from make_synthetic_dataset
+        n_donors = 5
+        import math
+        groups_per_donor = math.ceil(cells_per_donor / group_size)  # 13
+
+        sampler = DonorGroupSampler(
+            dataset, batch_size=64, group_size=group_size, seed=42,
+            iterate_all_donors=True
+        )
+        donor_ids = np.array(dataset["donor_id"])
+        indices = list(sampler)
+
+        # Each donor should have ceil(100/8) = 13 groups, 13*8 = 104 indices
+        expected_total = n_donors * groups_per_donor * group_size
+        assert len(indices) == expected_total
+
+        # Check donor group counts
+        counts = sampler.get_eval_donor_group_counts()
+        assert len(counts) == n_donors
+        for donor, n_groups in counts.items():
+            assert n_groups == groups_per_donor
+
+        # Check all groups are donor-pure
+        for start in range(0, len(indices), group_size):
+            group = indices[start:start + group_size]
+            group_donors = set(donor_ids[group])
+            assert len(group_donors) == 1
 
     def test_eval_mode_coverage(self, dataset):
-        """iterate_all_donors=True should visit every donor exactly once."""
+        """iterate_all_donors=True should visit every donor."""
         sampler = DonorGroupSampler(
             dataset, batch_size=64, group_size=8, seed=42,
             iterate_all_donors=True
@@ -96,16 +127,10 @@ class TestDonorGroupSampler:
         donor_ids = np.array(dataset["donor_id"])
         indices = list(sampler)
 
-        # 5 donors * 8 = 40 indices
-        assert len(indices) == 40
-
-        # Check each donor appears in exactly one group
         seen_donors = set()
         for start in range(0, len(indices), 8):
             group = indices[start:start + 8]
-            donor = donor_ids[group[0]]
-            assert donor not in seen_donors, f"Donor {donor} visited twice"
-            seen_donors.add(donor)
+            seen_donors.add(donor_ids[group[0]])
 
         assert len(seen_donors) == 5
 

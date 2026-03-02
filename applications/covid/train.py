@@ -228,32 +228,53 @@ def compute_metrics(eval_pred, label_names=None, num_labels=3):
     return metrics
 
 
-def aggregate_donor_predictions(predictions, logits, donor_ids, labels):
-    """
-    Aggregate single-cell predictions to donor level by majority vote.
-    Also aggregates logits by mean for AUROC computation.
+def aggregate_to_donor(logits, predictions, donor_ids, labels):
+    """Aggregate group/cell predictions to donor level using two methods.
+
+    Args:
+        logits: (n_groups, n_classes) raw model logits per group/cell
+        predictions: (n_groups,) argmax predictions per group/cell
+        donor_ids: (n_groups,) donor ID for each group/cell
+        labels: (n_groups,) label for each group/cell
+
+    Returns:
+        dict with keys 'majority_vote' and 'mean_logits', each containing
+        'predictions', 'labels', and 'donor_ids' arrays. 'mean_logits' also
+        contains 'logits' for AUROC computation.
     """
     unique_donors = np.unique(donor_ids)
-    donor_preds = []
-    donor_logits = []
+    mv_preds = []
+    ml_logits = []
     donor_labels = []
 
     for donor in unique_donors:
         mask = donor_ids == donor
         # Majority vote
         pred_counts = np.bincount(predictions[mask])
-        donor_preds.append(pred_counts.argmax())
-        # Mean logits for AUROC
-        donor_logits.append(logits[mask].mean(axis=0))
-        # All cells from a donor should have the same label
+        mv_preds.append(pred_counts.argmax())
+        # Mean logits
+        ml_logits.append(logits[mask].mean(axis=0))
+        # All groups from a donor share the same label
         donor_labels.append(labels[mask][0])
 
-    return (
-        np.array(donor_preds),
-        np.array(donor_logits),
-        np.array(donor_labels),
-        unique_donors,
-    )
+    mv_preds = np.array(mv_preds)
+    ml_logits = np.array(ml_logits)
+    ml_preds = np.argmax(ml_logits, axis=-1)
+    donor_labels = np.array(donor_labels)
+
+    return {
+        "majority_vote": {
+            "predictions": mv_preds,
+            "labels": donor_labels,
+            "donor_ids": unique_donors,
+        },
+        "mean_logits": {
+            "predictions": ml_preds,
+            "logits": ml_logits,
+            "labels": donor_labels,
+            "donor_ids": unique_donors,
+        },
+    }
 
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
@@ -337,6 +358,8 @@ def main(cfg: DictConfig) -> None:
 
     # Test
     if cfg.run_test_set:
+        from transformers.trainer_utils import EvalPrediction
+
         for data_key in ["test", "validation"]:
             trainer.accelerator.gradient_state._reset_state()
 
@@ -345,43 +368,81 @@ def main(cfg: DictConfig) -> None:
                 logits = outputs.predictions
                 predictions = np.argmax(logits, axis=-1)
                 labels = outputs.label_ids
-
-                # Aggregate to donor level
                 donor_ids = np.array(datasets[data_key]["donor_id"])
-                donor_preds, donor_logits, donor_labels, donors = \
-                    aggregate_donor_predictions(predictions, logits, donor_ids, labels)
-
-                output_dict = {
-                    "cell_predictions": predictions,
-                    "cell_labels": labels,
-                    "donor_predictions": donor_preds,
-                    "donor_logits": donor_logits,
-                    "donor_labels": donor_labels,
-                    "donor_ids": donors,
-                    "label_names": dict(cfg.data.label_names),
-                }
             else:
-                outputs, indices = trainer.predict(
+                outputs, indices, donor_ids = trainer.predict(
                     datasets[data_key], metric_key_prefix=data_key
                 )
-                if isinstance(outputs.predictions, tuple):
-                    predictions = np.argmax(outputs.predictions[0], axis=-1)
-                else:
-                    predictions = np.argmax(outputs.predictions, axis=-1)
+                logits = outputs.predictions[0] if isinstance(outputs.predictions, tuple) else outputs.predictions
+                predictions = np.argmax(logits, axis=-1)
                 labels = outputs.label_ids[0] if isinstance(outputs.label_ids, tuple) else outputs.label_ids
 
-                output_dict = {
-                    "predictions": predictions,
-                    "labels": labels,
-                    "indices": indices,
-                    "label_names": dict(cfg.data.label_names),
-                }
+            # Group-level metrics (cell-level for single-cell mode)
+            group_metrics = compute_metrics(
+                EvalPrediction(predictions=logits, label_ids=labels),
+                cfg.data.label_names, cfg.model.num_labels,
+            )
+            group_metrics = {f"group_{k}": v for k, v in group_metrics.items()}
 
-            trainer.log_metrics(data_key, outputs.metrics)
+            # Aggregate to donor level (both methods)
+            donor_agg = aggregate_to_donor(logits, predictions, donor_ids, labels)
+
+            # Donor metrics via majority vote (no AUROC — hard predictions only)
+            mv = donor_agg["majority_vote"]
+            mv_metrics = {
+                "donor_majority_accuracy": (mv["predictions"] == mv["labels"]).mean(),
+                "donor_majority_balanced_accuracy": balanced_accuracy_score(
+                    mv["labels"], mv["predictions"]
+                ),
+            }
+
+            # Donor metrics via mean logits (full metrics including AUROC)
+            ml = donor_agg["mean_logits"]
+            ml_metrics = compute_metrics(
+                EvalPrediction(predictions=ml["logits"], label_ids=ml["labels"]),
+                cfg.data.label_names, cfg.model.num_labels,
+            )
+            ml_metrics = {f"donor_meanlogits_{k}": v for k, v in ml_metrics.items()}
+
+            all_metrics = {**outputs.metrics, **group_metrics, **mv_metrics, **ml_metrics}
+            trainer.log_metrics(data_key, all_metrics)
+
+            output_dict = {
+                "group_predictions": predictions,
+                "group_logits": logits,
+                "group_labels": labels,
+                "group_donor_ids": donor_ids,
+                "group_metrics": group_metrics,
+                "donor_majority_predictions": mv["predictions"],
+                "donor_majority_metrics": mv_metrics,
+                "donor_meanlogits_predictions": ml["predictions"],
+                "donor_meanlogits_logits": ml["logits"],
+                "donor_meanlogits_metrics": ml_metrics,
+                "donor_labels": mv["labels"],
+                "donor_ids": mv["donor_ids"],
+                "label_names": dict(cfg.data.label_names),
+            }
             np.save(
                 os.path.join(cfg.training.output_dir, f"{data_key}_predictions.npy"),
                 output_dict,
             )
+
+            # Save JSON results for plotting (compatible with benchmark format)
+            gs_str = str(cfg.data.group_size)
+            json_result = {
+                "method": "tissueformer",
+                "group_size": gs_str,
+                "group_metrics": {k: float(v) for k, v in group_metrics.items()},
+                "donor_majority_metrics": {k: float(v) for k, v in mv_metrics.items()},
+                "donor_meanlogits_metrics": {k: float(v) for k, v in ml_metrics.items()},
+                "label_names": dict(cfg.data.label_names),
+            }
+            json_path = os.path.join(
+                cfg.training.output_dir,
+                f"tissueformer_gs{gs_str}_{data_key}_results.json",
+            )
+            with open(json_path, "w") as f:
+                json.dump(json_result, f, indent=2)
 
     wandb.finish()
 
