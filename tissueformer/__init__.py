@@ -1,3 +1,4 @@
+from tissueformer.tokenizer import TranscriptomeTokenizer
 from tissueformer.model import (
     TissueFormer,
     TissueFormerConfig,
@@ -12,6 +13,7 @@ from tissueformer.samplers import (
 )
 
 __all__ = [
+    "TranscriptomeTokenizer",
     "TissueFormer",
     "TissueFormerConfig",
     "SequenceClassifierOutputWithSingleCell",

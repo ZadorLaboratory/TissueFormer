@@ -1,6 +1,6 @@
 #!/grid/zador/home/benjami/miniconda3/envs/geneformer/bin/python
 
-from h5ad_tokenizer import TranscriptomeTokenizer
+from tissueformer.tokenizer import TranscriptomeTokenizer
 import time
 import argparse
 import pickle
@@ -13,8 +13,8 @@ import anndata as ad
 parent_directory = os.environ.get('ROOT_DATA_PATH') # /home/benjami/mnt/zador_data_norepl/Ari/transcriptomics
 
 parser = argparse.ArgumentParser(description='Tokenize anndata files')
-parser.add_argument('--gene_median_file', type=str, default="files/median_dict.pkl",
-                    help='path to gene median file')
+parser.add_argument('--gene_median_file', type=str, default=None,
+                    help='path to gene median file (default: use bundled tissueformer median dict)')
 parser.add_argument('--token_dictionary_file', type=str, default="files/barseq_token_dict_cls.pkl",
                     help='path to token dictionary file')                    
 parser.add_argument('--h5ad_data_directory', type=str, default="barseq/Chen2023",

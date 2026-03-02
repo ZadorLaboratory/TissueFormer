@@ -19,12 +19,12 @@ import pickle
 from pathlib import Path
 
 import anndata as ad
+
+GENE_MEDIAN_FILE = Path(__file__).parent / "files" / "median_dict.pkl"
 import numpy as np
 from datasets import Dataset
 from scipy import sparse
 
-GENE_MEDIAN_FILE = Path(__file__).parent / "gene_median_dictionary.pkl"
-TOKEN_DICTIONARY_FILE = Path(__file__).parent / "token_dictionary.pkl"
 
 
 def tokenize_cell(gene_vector, gene_tokens):
@@ -47,7 +47,7 @@ class TranscriptomeTokenizer:
         custom_attr_name_dict,
         nproc=1,
         gene_median_file=GENE_MEDIAN_FILE,
-        token_dictionary_file=TOKEN_DICTIONARY_FILE,
+        token_dictionary_file=None,
         prepend_cls=True,   
         prepend_tissue=False,
         prepend_species=None,
@@ -95,6 +95,8 @@ class TranscriptomeTokenizer:
         self.gene_panel = gene_panel
         # load dictionary of gene normalization factors
         # (non-zero median value of expression across Genecorpus-30M)
+        if gene_median_file is None:
+            gene_median_file = GENE_MEDIAN_FILE
         with open(gene_median_file, "rb") as f:
             self.gene_median_dict = pickle.load(f)
 
