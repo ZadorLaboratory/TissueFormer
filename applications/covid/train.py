@@ -48,15 +48,17 @@ def create_model(config: DictConfig, class_weights=None):
     """Create model based on config."""
     class_weights_list = class_weights.tolist() if class_weights is not None else None
 
+    bert_path = os.path.expanduser(bert_path)
+
     if config.model.pretrained_type == "single-cell":
         model = BertForSequenceClassification.from_pretrained(
-            config.model.bert_path_or_name,
+            bert_path,
             num_labels=config.model.num_labels,
         )
     elif config.model.pretrained_type in ("none", "bert_only"):
         model_config = TissueFormerConfig(
             num_labels=config.model.num_labels,
-            bert_config=config.model.bert_path_or_name,
+            bert_config=bert_path,
             num_set_layers=config.model.num_set_layers,
             set_hidden_size=config.model.set_hidden_size,
             num_attention_heads=config.model.num_attention_heads,
@@ -69,7 +71,7 @@ def create_model(config: DictConfig, class_weights=None):
         model = TissueFormer(model_config)
 
         if config.model.pretrained_type == "bert_only":
-            pretrained_bert = BertModel.from_pretrained(config.model.bert_path_or_name)
+            pretrained_bert = BertModel.from_pretrained(bert_path)
             model.bert.load_state_dict(pretrained_bert.state_dict())
 
         if hasattr(model, "class_weights") and class_weights is not None:
