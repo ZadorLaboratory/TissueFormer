@@ -14,10 +14,14 @@ Usage:
   tk.tokenize_data("h5ad_data_file", "output_directory", "output_prefix")
 """
 
+import logging
 import os
 import pickle
+import warnings
 from pathlib import Path
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 import anndata as ad
 
@@ -305,18 +309,30 @@ class TranscriptomeTokenizer:
 
         # Add counts to metadata
         if self.retain_counts:
+            n_bytes = data.shape[0] * data.shape[1] * 8
+            if n_bytes > 4 * 1024**3:
+                warnings.warn(
+                    f"retain_counts will densify the full matrix "
+                    f"({data.shape[0]} cells × {data.shape[1]} features ≈ "
+                    f"{n_bytes / 1024**3:.1f} GB). This may cause OOM.",
+                    stacklevel=2,
+                )
+            logger.info("Densifying sparse matrix for raw counts...")
             file_cell_metadata["raw_counts"] = data.toarray().tolist()
 
         return tokenized_cells, file_cell_metadata
 
     def create_dataset(self, tokenized_cells, cell_metadata):
+        n_cells = len(tokenized_cells)
+
         # create attention masks (1s for all tokens, 0s for padding)
+        logger.info("Building attention masks for %d cells...", n_cells)
         pad_token = self.gene_token_dict["<pad>"]
         attention_masks = [
             [1 if token != pad_token else 0 for token in cell]
-            for cell in tokenized_cells
+            for cell in tqdm(tokenized_cells, desc="Attention masks", unit="cell")
         ]
-        
+
         # create dict for dataset creation
         dataset_dict = {
             "input_ids": tokenized_cells,
@@ -325,6 +341,7 @@ class TranscriptomeTokenizer:
         dataset_dict.update(cell_metadata)
 
         # create dataset
+        logger.info("Creating Arrow dataset from %d cells...", n_cells)
         output_dataset = Dataset.from_dict(dataset_dict)
 
         # measure lengths of dataset
@@ -332,6 +349,7 @@ class TranscriptomeTokenizer:
             example["length"] = len(example["input_ids"])
             return example
 
+        logger.info("Computing sequence lengths...")
         output_dataset_truncated_w_length = output_dataset.map(
             measure_length, num_proc=self.nproc
         )
