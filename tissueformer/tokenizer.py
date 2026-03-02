@@ -17,6 +17,7 @@ Usage:
 import os
 import pickle
 from pathlib import Path
+from tqdm import tqdm
 
 import anndata as ad
 
@@ -216,11 +217,22 @@ class TranscriptomeTokenizer:
             data = adata.X
 
         tokenized_cells = []
-        chunk_size = 250_000  # Number of rows to process in each chunk
+        # Scale chunk size inversely with gene count to cap memory usage.
+        # Peak memory per chunk ≈ chunk_size × n_genes × 16 bytes
+        # (dense array + argsort copy).
+        n_genes = len(coding_miRNA_loc)
+        if n_genes == 0:
+            raise ValueError(
+                "No genes in the h5ad file matched the tokenizer vocabulary. "
+                "Check that var_names and the gene median / token dictionaries "
+                "use the same ID format (e.g. human vs mouse Ensembl IDs)."
+            )
+        max_chunk_bytes = 2 * 1024**3  # 2 GB target
+        chunk_size = max(512, max_chunk_bytes // (n_genes * 16))
         num_rows = data.shape[0]
         num_chunks = (num_rows - 1) // chunk_size + 1
 
-        for chunk_idx in range(num_chunks):
+        for chunk_idx in tqdm(range(num_chunks), desc="Tokenizing cells", unit="chunk"):
             start = chunk_idx * chunk_size
             end = min((chunk_idx + 1) * chunk_size, num_rows)
 
