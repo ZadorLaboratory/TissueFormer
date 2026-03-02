@@ -1,0 +1,25 @@
+# config/model/default.yaml
+pretrained_type: "bert_only"  # Options: "none", "bert_only", "single-cell"
+
+# Geneformer pretrained BERT weights
+bert_path_or_name: "ctheodoris/Geneformer"
+
+# Model architecture parameters
+num_labels: 3  # control, mild, severe
+num_set_layers: 2  # Simpler task than 290-class brain annotation
+set_hidden_size: 256
+num_attention_heads: 8
+dropout_prob: 0.1
+rms_layernorm: false
+
+# Model behavior flags
+detach_bert_embeddings: false
+single_cell_loss_after_set: false
+single_cell_vs_group_weight: 0.0  # No single-cell auxiliary loss
+
+# Position encoding (disabled for donor grouping)
+relative_positions:
+  enabled: false
+  absolute_Z: false
+  encoding_dim: 48
+  encoding_type: "mlp"

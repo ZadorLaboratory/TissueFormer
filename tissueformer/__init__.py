@@ -10,6 +10,8 @@ from tissueformer.samplers import (
     HexagonalSpatialGroupSampler,
     DistributedHexagonalSpatialGroupSampler,
     IndexTrackingDataLoader,
+    DonorGroupSampler,
+    GroupedDonorTrainer,
 )
 
 __all__ = [
@@ -22,4 +24,6 @@ __all__ = [
     "HexagonalSpatialGroupSampler",
     "DistributedHexagonalSpatialGroupSampler",
     "IndexTrackingDataLoader",
+    "DonorGroupSampler",
+    "GroupedDonorTrainer",
 ]

@@ -1,0 +1,21 @@
+dataset_path: data/combat_fold0.dataset  # Path to tokenized DatasetDict
+group_size: 64
+validation_split: 0.1
+
+# Donor/label column names in the tokenized dataset
+donor_key: "donor_id"
+label_key: "label"
+cell_type_key: "cell_type"
+
+label_names:
+  0: "control"
+  1: "mild"
+  2: "severe"
+
+max_train_samples: null
+max_eval_samples: null
+
+# Class weights configuration
+class_weights:
+  enabled: false
+  path: null

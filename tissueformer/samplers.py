@@ -1410,3 +1410,268 @@ class IndexTrackingDataLoader:
             return np.concatenate(self.collected_indices)
         else:
             return [item for batch in self.collected_indices for item in batch]
+
+
+class DonorGroupSampler(Sampler):
+    """
+    Sampler that groups cells by donor_id for per-subject classification tasks.
+
+    In training mode (iterate_all_donors=False): randomly picks donors and samples
+    group_size cells from each donor. Repeats for num_samples // group_size groups.
+
+    In eval mode (iterate_all_donors=True): iterates through each donor once,
+    sampling group_size cells per donor for donor-level predictions.
+
+    For group_size=1: falls back to standard random sampling (no grouping).
+    """
+
+    def __init__(
+        self,
+        dataset,
+        batch_size: int,
+        group_size: int = 32,
+        donor_key: str = "donor_id",
+        seed: int = 0,
+        iterate_all_donors: bool = False,
+        num_samples: Optional[int] = None,
+    ):
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.group_size = group_size
+        self.donor_key = donor_key
+        self.seed = seed
+        self.iterate_all_donors = iterate_all_donors
+        self.epoch = 0
+
+        # Build donor -> cell indices mapping
+        donor_ids = np.array(dataset[donor_key])
+        self.donor_to_indices: Dict[str, np.ndarray] = {}
+        for donor in np.unique(donor_ids):
+            mask = donor_ids == donor
+            self.donor_to_indices[donor] = np.where(mask)[0]
+
+        self.donors = list(self.donor_to_indices.keys())
+        assert len(self.donors) > 0, "No donors found in dataset"
+
+        # Warn about small donors
+        for donor, indices in self.donor_to_indices.items():
+            if len(indices) < group_size and group_size > 1:
+                import warnings
+                warnings.warn(
+                    f"Donor {donor} has {len(indices)} cells, fewer than group_size={group_size}. "
+                    f"Will sample with replacement."
+                )
+
+        # Calculate number of samples
+        if num_samples is not None:
+            self.num_samples = num_samples
+        elif iterate_all_donors:
+            self.num_samples = len(self.donors) * group_size
+        else:
+            self.num_samples = len(dataset)
+
+    def __len__(self) -> int:
+        return self.num_samples
+
+    def set_epoch(self, epoch: int):
+        self.epoch = epoch
+
+    def _sample_cells_from_donor(self, donor: str, rng: np.random.RandomState) -> np.ndarray:
+        """Sample group_size cells from a donor, with replacement if needed."""
+        indices = self.donor_to_indices[donor]
+        replace = len(indices) < self.group_size
+        return rng.choice(indices, size=self.group_size, replace=replace)
+
+    def __iter__(self) -> Iterator[int]:
+        rng = np.random.RandomState(self.seed + self.epoch)
+
+        # group_size=1: standard random sampling
+        if self.group_size == 1:
+            indices = rng.permutation(len(self.dataset))
+            yield from indices[:self.num_samples].tolist()
+            return
+
+        if self.iterate_all_donors:
+            # Eval mode: one group per donor, deterministic order
+            donor_order = sorted(self.donors)
+            for donor in donor_order:
+                cell_indices = self._sample_cells_from_donor(donor, rng)
+                yield from cell_indices.tolist()
+        else:
+            # Train mode: random donor selection
+            num_groups = self.num_samples // self.group_size
+            for _ in range(num_groups):
+                donor = self.donors[rng.randint(len(self.donors))]
+                cell_indices = self._sample_cells_from_donor(donor, rng)
+                yield from cell_indices.tolist()
+
+
+class GroupedDonorTrainer(Trainer):
+    """
+    Trainer that groups cells by donor for per-subject classification.
+    Uses DonorGroupSampler for batching and SpatialGroupCollator for reshaping.
+
+    For group_size=1, falls back to standard HF Trainer behavior.
+    """
+
+    def __init__(
+        self,
+        *args,
+        donor_group_size: int = 32,
+        donor_key: str = "donor_id",
+        label_key: str = "labels",
+        index_key: str = "uuid",
+        add_single_cell_labels: bool = True,
+        additional_feature_keys: Optional[List[str]] = None,
+        **kwargs,
+    ):
+        if additional_feature_keys is None:
+            additional_feature_keys = []
+
+        self.donor_group_size = donor_group_size
+        self.donor_key = donor_key
+
+        # Only use group collator for group_size > 1
+        if donor_group_size > 1:
+            kwargs["data_collator"] = SpatialGroupCollator(
+                group_size=donor_group_size,
+                label_key=label_key,
+                feature_keys=["input_ids"] + additional_feature_keys,
+                pad_token_id=0,
+                add_single_cell_labels=add_single_cell_labels,
+                index_key=index_key,
+                relative_positions=False,
+            )
+
+        super().__init__(*args, **kwargs)
+
+        if donor_group_size > 1:
+            assert self.args.train_batch_size % donor_group_size == 0, \
+                "train_batch_size must be divisible by donor_group_size"
+
+    def _get_train_sampler(self) -> Optional[Sampler]:
+        if self.train_dataset is None or not isinstance(self.train_dataset, collections.abc.Sized):
+            return None
+
+        if self.donor_group_size == 1:
+            return super()._get_train_sampler()
+
+        random_seed = self.args.seed + self.epoch if hasattr(self, 'epoch') else self.args.seed
+
+        return DonorGroupSampler(
+            dataset=self.train_dataset,
+            batch_size=self.args.train_batch_size,
+            group_size=self.donor_group_size,
+            donor_key=self.donor_key,
+            seed=random_seed,
+            iterate_all_donors=False,
+        )
+
+    def _get_eval_sampler(self, eval_dataset) -> Optional[Sampler]:
+        if eval_dataset is None or not isinstance(eval_dataset, collections.abc.Sized):
+            return None
+
+        if self.donor_group_size == 1:
+            return super()._get_eval_sampler(eval_dataset)
+
+        return DonorGroupSampler(
+            dataset=eval_dataset,
+            batch_size=self.args.eval_batch_size,
+            group_size=self.donor_group_size,
+            donor_key=self.donor_key,
+            seed=42,
+            iterate_all_donors=True,
+        )
+
+    def get_test_dataloader(self, test_dataset: Dataset) -> DataLoader:
+        """Returns test DataLoader with iterate_all_donors=True."""
+        if self.donor_group_size == 1:
+            return super().get_test_dataloader(test_dataset)
+
+        data_collator = self.data_collator
+
+        if is_datasets_available() and isinstance(test_dataset, datasets.Dataset):
+            test_dataset = self._remove_unused_columns(test_dataset, description="test")
+        else:
+            data_collator = self._get_collator_with_removed_columns(data_collator, description="test")
+
+        sampler = DonorGroupSampler(
+            dataset=test_dataset,
+            batch_size=self.args.eval_batch_size,
+            group_size=self.donor_group_size,
+            donor_key=self.donor_key,
+            seed=42,
+            iterate_all_donors=True,
+        )
+
+        dataloader_params = {
+            "batch_size": self.args.eval_batch_size,
+            "collate_fn": data_collator,
+            "num_workers": self.args.dataloader_num_workers,
+            "pin_memory": self.args.dataloader_pin_memory,
+            "persistent_workers": self.args.dataloader_persistent_workers,
+            "sampler": sampler,
+            "drop_last": False,
+        }
+
+        return self.accelerator.prepare(DataLoader(test_dataset, **dataloader_params))
+
+    def predict(
+        self, test_dataset: Dataset, ignore_keys: Optional[List[str]] = None,
+        metric_key_prefix: str = "test",
+    ) -> PredictionOutput:
+        """Predict with donor-level grouping and index tracking."""
+        if self.donor_group_size == 1:
+            return super().predict(test_dataset, ignore_keys=ignore_keys,
+                                   metric_key_prefix=metric_key_prefix)
+
+        self._memory_tracker.start()
+
+        test_dataloader = self.get_test_dataloader(test_dataset)
+        index_tracking_dataloader = IndexTrackingDataLoader(test_dataloader)
+
+        start_time = time.time()
+        eval_loop = self.prediction_loop if self.args.use_legacy_prediction_loop else self.evaluation_loop
+        output = eval_loop(
+            index_tracking_dataloader,
+            description="Prediction",
+            ignore_keys=ignore_keys,
+            metric_key_prefix=metric_key_prefix,
+        )
+
+        total_batch_size = self.args.eval_batch_size * self.args.world_size
+        if f"{metric_key_prefix}_jit_compilation_time" in output.metrics:
+            start_time += output.metrics[f"{metric_key_prefix}_jit_compilation_time"]
+        if f"{metric_key_prefix}_model_preparation_time" in output.metrics:
+            start_time += output.metrics[f"{metric_key_prefix}_model_preparation_time"]
+        output.metrics.update(
+            speed_metrics(
+                metric_key_prefix,
+                start_time,
+                num_samples=output.num_samples,
+                num_steps=math.ceil(output.num_samples / total_batch_size),
+            )
+        )
+
+        self.control = self.callback_handler.on_predict(self.args, self.state, self.control, output.metrics)
+        self._memory_tracker.stop_and_update_metrics(output.metrics)
+
+        ordered_indices = index_tracking_dataloader.get_collected_indices()
+
+        # Subsample: one prediction per group (every group_size-th entry)
+        if isinstance(output.predictions, tuple):
+            preds = tuple([p[::self.donor_group_size] for p in output.predictions])
+        else:
+            preds = output.predictions[::self.donor_group_size]
+
+        if isinstance(output.label_ids, tuple):
+            label_ids = tuple([l[::self.donor_group_size] for l in output.label_ids])
+        else:
+            label_ids = output.label_ids[::self.donor_group_size]
+        ordered_indices = ordered_indices[::self.donor_group_size]
+
+        return PredictionOutput(
+            predictions=preds,
+            label_ids=label_ids,
+            metrics=output.metrics,
+        ), ordered_indices

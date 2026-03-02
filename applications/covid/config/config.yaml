@@ -1,0 +1,21 @@
+defaults:
+  - _self_
+  - model: default
+  - data: default
+  - training: default
+  - wandb: default
+  - override hydra/hydra_logging: default
+  - override hydra/job_logging: default
+
+seed: 42
+debug: false
+dataset_name: "combat"  # Options: combat, ren, stevenson
+output_dir: outputs/${dataset_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+run_test_set: true
+
+hydra:
+  run:
+    dir: ${output_dir}
+  sweep:
+    dir: ${output_dir}
+    subdir: ${hydra.job.id}
