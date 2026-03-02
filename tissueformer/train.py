@@ -15,8 +15,8 @@ from transformers import (
 )
 from sklearn.model_selection import train_test_split
 
-from model import HierarchicalBert, HierarchicalBertConfig
-from samplers import GroupedSpatialTrainer
+from .model import TissueFormer, TissueFormerConfig
+from .samplers import GroupedSpatialTrainer
 from transformers import BertModel, BertConfig, BertForSequenceClassification, Trainer
 
 import sys
@@ -58,7 +58,7 @@ def setup_wandb(cfg: DictConfig):
         config=OmegaConf.to_container(cfg, resolve=True),
     )
 
-def create_model(config: DictConfig, class_weights: Optional[torch.Tensor] = None) -> HierarchicalBert:
+def create_model(config: DictConfig, class_weights: Optional[torch.Tensor] = None) -> TissueFormer:
     """Create model based on pretraining configuration."""
     # Convert class weights to list if present for JSON serialization
     class_weights_list = class_weights.tolist() if class_weights is not None else None
@@ -68,7 +68,7 @@ def create_model(config: DictConfig, class_weights: Optional[torch.Tensor] = Non
             raise ValueError("model_path must be specified when pretrained_type is 'full'")
             
         # Load full pretrained hierarchical model
-        model = HierarchicalBert.from_pretrained(
+        model = TissueFormer.from_pretrained(
             config.model.bert_path_or_name,
             num_labels=config.model.num_labels,
             class_weights=class_weights,  # Pass tensor to model
@@ -92,7 +92,7 @@ def create_model(config: DictConfig, class_weights: Optional[torch.Tensor] = Non
         model = BertForSequenceClassification(config)
     else:
         # For both "none" and "bert_only" cases, first create config
-        model_config = HierarchicalBertConfig(
+        model_config = TissueFormerConfig(
             num_labels=config.model.num_labels,
             # For "none", pass None to use default config
             bert_config=config.model.bert_path_or_name,
@@ -112,7 +112,7 @@ def create_model(config: DictConfig, class_weights: Optional[torch.Tensor] = Non
         )
         
         # Initialize new model
-        model = HierarchicalBert(model_config)
+        model = TissueFormer(model_config)
         
         # If bert_only, load pretrained BERT weights
         if config.model.pretrained_type == "bert_only":
@@ -361,7 +361,7 @@ def test_by_cell_type(dataset, trainer, type_col, min_N, output_dir, label_names
     with open(os.path.join(output_dir, "cell_type_accuracies.json"), "w") as f:
         json.dump(accuracies_serializable, f)
 
-@hydra.main(version_base=None, config_path="config", config_name="config")
+@hydra.main(version_base=None, config_path="../applications/brain_annotation/config", config_name="config")
 def main(cfg: DictConfig) -> None:
     # Print config
     print(OmegaConf.to_yaml(cfg))

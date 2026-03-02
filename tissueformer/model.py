@@ -18,8 +18,8 @@ class SequenceClassifierOutputWithSingleCell(SequenceClassifierOutput):
     single_cell_logits: Optional[torch.Tensor] = None
 
 @dataclass
-class HierarchicalBertConfig(PretrainedConfig):
-    """Configuration class for HierarchicalBert."""
+class TissueFormerConfig(PretrainedConfig):
+    """Configuration class for TissueFormer."""
     
     def __init__(
         self,
@@ -63,7 +63,7 @@ class HierarchicalBertConfig(PretrainedConfig):
 class SetTransformerLayer(nn.Module):
     """Simple Set Transformer layer."""
     
-    def __init__(self, config: HierarchicalBertConfig):
+    def __init__(self, config: TissueFormerConfig):
         super().__init__()
         self.attention = nn.MultiheadAttention(
             embed_dim=config.set_hidden_size,
@@ -155,11 +155,11 @@ class PositionalEncoder(nn.Module):
     def forward(self, positions: torch.Tensor) -> torch.Tensor:
         return self.encoder(positions)
 
-class HierarchicalBert(BertPreTrainedModel):
-    config_class = HierarchicalBertConfig
+class TissueFormer(BertPreTrainedModel):
+    config_class = TissueFormerConfig
     supports_gradient_checkpointing = True
 
-    def __init__(self, config: HierarchicalBertConfig):
+    def __init__(self, config: TissueFormerConfig):
         super().__init__(config)
         
         # Initialize BERT 
