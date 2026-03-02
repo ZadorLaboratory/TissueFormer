@@ -1,4 +1,5 @@
-dataset_path: data/combat_fold0.dataset  # Path to tokenized DatasetDict
+dataset_path: data/combat.dataset  # Path to tokenized Dataset
+cv_fold: 0  # Cross-validation fold index
 group_size: 64
 validation_split: 0.1
 

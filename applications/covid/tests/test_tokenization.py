@@ -52,71 +52,90 @@ def tmp_dir():
 
 class TestTokenization:
 
-    def test_donor_isolation(self, tmp_dir):
-        """No donor_id should appear in both train and test."""
-        from applications.covid.data.tokenize_cells import tokenize_and_split
+    def test_returns_single_dataset(self, tmp_dir):
+        """tokenize_dataset should return a single Dataset, not DatasetDict."""
+        from applications.covid.data.tokenize_cells import tokenize_dataset
+        from datasets import Dataset
 
         h5ad_path = os.path.join(tmp_dir, "test.h5ad")
         make_synthetic_h5ad(h5ad_path, n_cells=180, n_donors=12)
 
-        ds = tokenize_and_split(
-            h5ad_path, tmp_dir, "test_covid", cv_fold=0,
+        ds = tokenize_dataset(
+            h5ad_path, tmp_dir, "test_covid",
             nproc=1, n_splits=3
         )
 
-        train_donors = set(ds["train"]["donor_id"])
-        test_donors = set(ds["test"]["donor_id"])
-        assert len(train_donors & test_donors) == 0, \
-            f"Donors in both splits: {train_donors & test_donors}"
+        assert isinstance(ds, Dataset), \
+            f"Expected Dataset, got {type(ds)}"
+
+    def test_donor_isolation_in_splits(self, tmp_dir):
+        """No donor_id should appear in both train and test for any fold."""
+        from applications.covid.data.tokenize_cells import tokenize_dataset
+
+        h5ad_path = os.path.join(tmp_dir, "test.h5ad")
+        make_synthetic_h5ad(h5ad_path, n_cells=180, n_donors=12)
+
+        tokenize_dataset(
+            h5ad_path, tmp_dir, "test_covid",
+            nproc=1, n_splits=3
+        )
+
+        splits_path = os.path.join(tmp_dir, "test_covid_donor_splits.json")
+        with open(splits_path) as f:
+            splits = json.load(f)
+
+        for fold_key, fold in splits["folds"].items():
+            train_donors = set(fold["train_donors"])
+            test_donors = set(fold["test_donors"])
+            assert len(train_donors & test_donors) == 0, \
+                f"Fold {fold_key}: donors in both splits: {train_donors & test_donors}"
 
     def test_label_integrity(self, tmp_dir):
         """All cells for a donor should have the same integer label."""
-        from applications.covid.data.tokenize_cells import tokenize_and_split
+        from applications.covid.data.tokenize_cells import tokenize_dataset
 
         h5ad_path = os.path.join(tmp_dir, "test.h5ad")
         make_synthetic_h5ad(h5ad_path, n_cells=180, n_donors=12)
 
-        ds = tokenize_and_split(
-            h5ad_path, tmp_dir, "test_covid", cv_fold=0,
+        ds = tokenize_dataset(
+            h5ad_path, tmp_dir, "test_covid",
             nproc=1, n_splits=3
         )
 
-        for split in ["train", "test"]:
-            donors = np.array(ds[split]["donor_id"])
-            labels = np.array(ds[split]["label"])
-            for donor in np.unique(donors):
-                donor_labels = labels[donors == donor]
-                assert len(np.unique(donor_labels)) == 1, \
-                    f"Donor {donor} has inconsistent labels in {split}"
+        donors = np.array(ds["donor_id"])
+        labels = np.array(ds["label"])
+        for donor in np.unique(donors):
+            donor_labels = labels[donors == donor]
+            assert len(np.unique(donor_labels)) == 1, \
+                f"Donor {donor} has inconsistent labels"
 
-    def test_splits_have_expected_columns(self, tmp_dir):
+    def test_dataset_has_expected_columns(self, tmp_dir):
         """Output should have input_ids, donor_id, label, cell_type."""
-        from applications.covid.data.tokenize_cells import tokenize_and_split
+        from applications.covid.data.tokenize_cells import tokenize_dataset
 
         h5ad_path = os.path.join(tmp_dir, "test.h5ad")
         make_synthetic_h5ad(h5ad_path, n_cells=180, n_donors=12)
 
-        ds = tokenize_and_split(
-            h5ad_path, tmp_dir, "test_covid", cv_fold=0,
+        ds = tokenize_dataset(
+            h5ad_path, tmp_dir, "test_covid",
             nproc=1, n_splits=3
         )
 
-        for split in ["train", "test"]:
-            cols = ds[split].column_names
-            assert "input_ids" in cols
-            assert "donor_id" in cols
-            assert "label" in cols
-            assert "cell_type" in cols
+        cols = ds.column_names
+        assert "input_ids" in cols
+        assert "donor_id" in cols
+        assert "label" in cols
+        assert "cell_type" in cols
 
     def test_label_map_saved(self, tmp_dir):
         """label_map.json should be saved and round-trip correctly."""
-        from applications.covid.data.tokenize_cells import tokenize_and_split
+        from applications.covid.data.tokenize_cells import tokenize_dataset
 
         h5ad_path = os.path.join(tmp_dir, "test.h5ad")
         make_synthetic_h5ad(h5ad_path, n_cells=180, n_donors=12)
 
-        tokenize_and_split(
-            h5ad_path, tmp_dir, "test_covid", cv_fold=0,
+        tokenize_dataset(
+            h5ad_path, tmp_dir, "test_covid",
             nproc=1, n_splits=3
         )
 
@@ -129,13 +148,13 @@ class TestTokenization:
 
     def test_donor_splits_saved(self, tmp_dir):
         """donor_splits.json should record fold assignments."""
-        from applications.covid.data.tokenize_cells import tokenize_and_split
+        from applications.covid.data.tokenize_cells import tokenize_dataset
 
         h5ad_path = os.path.join(tmp_dir, "test.h5ad")
         make_synthetic_h5ad(h5ad_path, n_cells=180, n_donors=12)
 
-        tokenize_and_split(
-            h5ad_path, tmp_dir, "test_covid", cv_fold=0,
+        tokenize_dataset(
+            h5ad_path, tmp_dir, "test_covid",
             nproc=1, n_splits=3
         )
 

@@ -21,23 +21,21 @@ for dataset in "${DATASETS[@]}"; do
         continue
     fi
 
+    # Tokenize once per dataset (no fold splitting)
+    if [ ! -d "data/${dataset}.dataset" ]; then
+        echo "Tokenizing ${dataset}..."
+        python data/tokenize_cells.py \
+            --h5ad_path "$H5AD_PATH" \
+            --output_directory data \
+            --output_prefix "$dataset" \
+            --raw-counts \
+            --nproc 8
+    else
+        echo "Dataset data/${dataset}.dataset already exists, skipping tokenization"
+    fi
+
     for fold in $(seq 0 $((N_FOLDS - 1))); do
         echo "--- Fold ${fold} ---"
-        PREFIX="${dataset}_fold${fold}"
-
-        # Tokenize (once per dataset per fold)
-        if [ ! -d "data/${PREFIX}.dataset" ]; then
-            echo "Tokenizing ${dataset} fold ${fold}..."
-            python data/tokenize_cells.py \
-                --h5ad_path "$H5AD_PATH" \
-                --output_directory data \
-                --output_prefix "$PREFIX" \
-                --cv-fold "$fold" \
-                --raw-counts \
-                --nproc 8
-        else
-            echo "Dataset data/${PREFIX}.dataset already exists, skipping tokenization"
-        fi
 
         # TissueFormer: sweep group sizes with HP tuning via Hydra multirun
         for gs in "${GROUP_SIZES[@]}"; do
@@ -46,7 +44,8 @@ for dataset in "${DATASETS[@]}"; do
                 python train.py \
                     dataset_name="${dataset}" \
                     data.group_size=1 \
-                    data.dataset_path="data/${PREFIX}.dataset" \
+                    data.dataset_path="data/${dataset}.dataset" \
+                    data.cv_fold="${fold}" \
                     model.pretrained_type="single-cell" \
                     training.remove_unused_columns=true \
                     seed="${fold}"
@@ -54,7 +53,8 @@ for dataset in "${DATASETS[@]}"; do
                 python train.py \
                     dataset_name="${dataset}" \
                     data.group_size="${gs}" \
-                    data.dataset_path="data/${PREFIX}.dataset" \
+                    data.dataset_path="data/${dataset}.dataset" \
+                    data.cv_fold="${fold}" \
                     seed="${fold}"
             fi
         done
@@ -65,7 +65,8 @@ for dataset in "${DATASETS[@]}"; do
             python benchmarks.py \
                 dataset_name="${dataset}" \
                 data.group_size="${gs}" \
-                data.dataset_path="data/${PREFIX}.dataset"
+                data.dataset_path="data/${dataset}.dataset" \
+                data.cv_fold="${fold}"
         done
     done
 done

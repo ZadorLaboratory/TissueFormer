@@ -297,10 +297,7 @@ def main(cfg: DictConfig) -> None:
     with open(splits_path) as f:
         split_info = json.load(f)
 
-    # Determine which fold from the dataset path
-    # e.g., "combat_fold0.dataset" -> fold 0
-    fold_str = base_name.split("fold")[-1] if "fold" in base_name else "0"
-    fold = int(fold_str)
+    fold = cfg.data.cv_fold
     train_donors = split_info["folds"][str(fold)]["train_donors"]
     test_donors = split_info["folds"][str(fold)]["test_donors"]
 

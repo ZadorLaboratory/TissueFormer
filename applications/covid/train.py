@@ -15,7 +15,7 @@ import wandb
 import torch
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
-from datasets import load_from_disk, disable_caching
+from datasets import load_from_disk, Dataset, DatasetDict, disable_caching
 from transformers import (
     TrainingArguments,
     Trainer,
@@ -95,9 +95,23 @@ def load_class_weights(cfg: DictConfig):
     return weights
 
 
-def prepare_datasets(dataset_dict, config):
-    """Prepare train/validation/test splits from pre-tokenized dataset."""
-    train_dataset = dataset_dict["train"]
+def prepare_datasets(dataset, donor_splits, cv_fold, config):
+    """Prepare train/validation/test splits from a single tokenized dataset.
+
+    The full tokenized dataset is split into train/test using donor
+    assignments from *donor_splits*, then train is further divided into
+    train/validation.
+    """
+    fold_info = donor_splits["folds"][str(cv_fold)]
+    train_donors = set(fold_info["train_donors"])
+    test_donors = set(fold_info["test_donors"])
+
+    donor_ids = np.array(dataset["donor_id"])
+    train_mask = np.isin(donor_ids, list(train_donors))
+    test_mask = np.isin(donor_ids, list(test_donors))
+
+    train_dataset = dataset.select(np.where(train_mask)[0])
+    test_dataset = dataset.select(np.where(test_mask)[0])
 
     train_idx, val_idx = train_test_split(
         np.arange(len(train_dataset)),
@@ -106,11 +120,11 @@ def prepare_datasets(dataset_dict, config):
     )
 
     # Add unique IDs
-    dataset_dict["test"] = dataset_dict["test"].add_column(
-        "uuid", np.arange(len(dataset_dict["test"]))
+    test_dataset = test_dataset.add_column(
+        "uuid", np.arange(len(test_dataset))
     )
     train_dataset = train_dataset.add_column(
-        "uuid", np.arange(len(dataset_dict["train"]))
+        "uuid", np.arange(len(train_dataset))
     )
 
     val_dataset = train_dataset.select(val_idx)
@@ -124,17 +138,15 @@ def prepare_datasets(dataset_dict, config):
         val_dataset = val_dataset.select(
             range(min(len(val_dataset), config.data.max_eval_samples))
         )
-        dataset_dict["test"] = dataset_dict["test"].select(
-            range(min(len(dataset_dict["test"]), config.data.max_eval_samples))
+        test_dataset = test_dataset.select(
+            range(min(len(test_dataset), config.data.max_eval_samples))
         )
 
     # Rename label column to 'labels' for HF Trainer
     if hasattr(config.data, "label_key"):
         train_dataset = train_dataset.rename_column(config.data.label_key, "labels")
         val_dataset = val_dataset.rename_column(config.data.label_key, "labels")
-        dataset_dict["test"] = dataset_dict["test"].rename_column(
-            config.data.label_key, "labels"
-        )
+        test_dataset = test_dataset.rename_column(config.data.label_key, "labels")
 
     # Verify label range
     all_labels = np.array(train_dataset["labels"])
@@ -145,11 +157,10 @@ def prepare_datasets(dataset_dict, config):
             f"found range [{unique_labels.min()}, {unique_labels.max()}]"
         )
 
-    from datasets import DatasetDict as DD
-    return DD({
+    return DatasetDict({
         "train": train_dataset,
         "validation": val_dataset,
-        "test": dataset_dict["test"],
+        "test": test_dataset,
     })
 
 
@@ -252,9 +263,24 @@ def main(cfg: DictConfig) -> None:
     setup_wandb(cfg)
     disable_caching()
 
-    # Load dataset
-    dataset_dict = load_from_disk(cfg.data.dataset_path)
-    datasets = prepare_datasets(dataset_dict, cfg)
+    # Load dataset and donor splits
+    dataset = load_from_disk(cfg.data.dataset_path)
+    if isinstance(dataset, DatasetDict):
+        raise TypeError(
+            f"Expected a single Dataset at {cfg.data.dataset_path}, "
+            "got a DatasetDict. Re-run tokenization with the updated "
+            "tokenize_cells.py (tokenize_dataset) to produce a single Dataset."
+        )
+
+    splits_path = os.path.join(
+        os.path.dirname(cfg.data.dataset_path),
+        os.path.basename(cfg.data.dataset_path).replace(".dataset", "")
+        + "_donor_splits.json",
+    )
+    with open(splits_path) as f:
+        donor_splits = json.load(f)
+
+    datasets = prepare_datasets(dataset, donor_splits, cfg.data.cv_fold, cfg)
     print(f"Loaded datasets: {datasets}")
 
     # Create model
