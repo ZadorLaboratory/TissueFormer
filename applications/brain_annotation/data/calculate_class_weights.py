@@ -7,6 +7,8 @@ from omegaconf import DictConfig, OmegaConf
 from datasets import load_from_disk, disable_caching
 import wandb
 
+from tissueformer.class_weights import calculate_class_weights
+
 
 def setup_wandb(cfg: DictConfig) -> None:
     """Initialize W&B logging if enabled"""
@@ -44,70 +46,6 @@ def infer_num_classes(labels) -> int:
     print(f"Unique labels: {unique_labels}")
     
     return num_classes
-
-
-def calculate_class_weights(
-    labels: np.ndarray,
-    method: str = "inverse",
-    beta: float = 0.999,
-) -> np.ndarray:
-    """
-    Calculate class weights based on label frequencies.
-    
-    Args:
-        labels: Array of labels (can be non-consecutive integers)
-        method: Weighting method to use:
-            - "inverse": 1/frequency (standard inverse frequency)
-            - "balanced": sklearn-style balanced weights (n_samples/(n_classes * counts))
-            - "effective": Effective number of samples based on beta
-        beta: Parameter for effective number of samples method
-            
-    Returns:
-        Array of class weights with shape (max_label + 1,)
-    """
-    n_samples = len(labels)
-    max_label = max(labels)
-    
-    # Use np.bincount for counting to match sklearn behavior
-    # This automatically handles non-consecutive labels
-    counts = np.bincount(labels, minlength=max_label + 1)
-    present_classes = counts > 0
-    n_classes = np.sum(present_classes)  # Only count classes that appear
-    
-    if method == "inverse":
-        # Simple inverse frequency
-        with np.errstate(divide='ignore'):
-            weights = 1 / counts
-        weights[counts == 0] = 0
-        # Normalize so weights sum to n_classes
-        weights = weights * (n_classes / weights.sum())
-        
-    elif method == "balanced":
-        # Sklearn-style balanced weights
-        # For classes with samples: n_samples / (n_classes * count)
-        with np.errstate(divide='ignore'):
-            weights = n_samples / (n_classes * counts)
-        weights[counts == 0] = 0
-        
-    elif method == "effective":
-        # Effective number of samples
-        weights = np.zeros_like(counts, dtype=float)
-        non_zero = counts > 0
-        weights[non_zero] = (1 - beta) / (1 - beta ** counts[non_zero])
-        # Normalize so weights sum to n_classes
-        weights = weights * (n_classes / weights.sum())
-        
-    else:
-        raise ValueError(f"Unknown weighting method: {method}")
-    
-    # Handle classes with zero samples
-    zero_sample_classes = np.where(counts == 0)[0]
-    if len(zero_sample_classes) > 0:
-        print(f"\nWarning: Classes {zero_sample_classes} have no samples in the training set")
-        print(f"Setting their weights to max weight: {np.max(weights[counts > 0]):.3f}")
-        weights[zero_sample_classes] = np.max(weights[counts > 0])
-    
-    return weights
 
 
 def verify_balanced_weights(labels: np.ndarray, weights: np.ndarray) -> None:

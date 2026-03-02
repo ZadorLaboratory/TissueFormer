@@ -15,7 +15,7 @@ fp16: true
 eval_strategy: "steps"
 save_strategy: "steps"
 load_best_model_at_end: true
-metric_for_best_model: "eval_accuracy"
+metric_for_best_model: "eval_balanced_accuracy"
 report_to: "wandb"
 remove_unused_columns: false
 dataloader_prefetch_factor: 4

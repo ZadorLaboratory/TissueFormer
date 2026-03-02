@@ -18,5 +18,6 @@ max_eval_samples: null
 
 # Class weights configuration
 class_weights:
-  enabled: false
-  path: null
+  enabled: true
+  method: "balanced"  # "inverse", "balanced", or "effective"
+  path: null  # If null, compute from training labels

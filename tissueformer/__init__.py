@@ -13,6 +13,7 @@ from tissueformer.samplers import (
     DonorGroupSampler,
     GroupedDonorTrainer,
 )
+from tissueformer.class_weights import calculate_class_weights
 
 __all__ = [
     "TranscriptomeTokenizer",
@@ -26,4 +27,5 @@ __all__ = [
     "IndexTrackingDataLoader",
     "DonorGroupSampler",
     "GroupedDonorTrainer",
+    "calculate_class_weights",
 ]

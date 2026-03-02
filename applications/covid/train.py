@@ -22,10 +22,11 @@ from transformers import (
     BertForSequenceClassification,
     set_seed,
 )
-from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.metrics import classification_report, roc_auc_score, balanced_accuracy_score
 from sklearn.model_selection import train_test_split
 
 from tissueformer.model import TissueFormer, TissueFormerConfig
+from tissueformer.class_weights import calculate_class_weights
 from tissueformer.samplers import GroupedDonorTrainer
 from transformers import BertModel
 
@@ -79,18 +80,27 @@ def create_model(config: DictConfig, class_weights=None):
     return model
 
 
-def load_class_weights(cfg: DictConfig):
-    """Load class weights if enabled."""
+def get_class_weights(cfg: DictConfig, train_labels: np.ndarray):
+    """Compute or load class weights for imbalanced classification.
+
+    When path is provided, loads pre-computed weights from file.
+    Otherwise, computes weights from train_labels using the configured method.
+    """
     if not cfg.data.class_weights.enabled:
         return None
-    if cfg.data.class_weights.path is None:
-        raise ValueError("Class weights enabled but no path provided")
-    weights = np.load(cfg.data.class_weights.path)
+
+    if cfg.data.class_weights.path is not None:
+        weights = np.load(cfg.data.class_weights.path)
+    else:
+        method = cfg.data.class_weights.get("method", "balanced")
+        weights = calculate_class_weights(train_labels, method=method)
+
     if len(weights) != cfg.model.num_labels:
         raise ValueError(
             f"Number of class weights ({len(weights)}) != num_labels ({cfg.model.num_labels})"
         )
     weights = torch.tensor(weights, dtype=torch.float32)
+    print(f"Class weights ({cfg.data.class_weights.get('method', 'loaded')}): {weights.tolist()}")
     wandb.run.summary["class_weights"] = weights.tolist()
     return weights
 
@@ -195,6 +205,7 @@ def compute_metrics(eval_pred, label_names=None, num_labels=3):
 
     metrics = {
         "accuracy": (predictions == labels).mean(),
+        "balanced_accuracy": balanced_accuracy_score(labels, predictions),
         "f1_macro": report["macro avg"]["f1-score"],
         "f1_weighted": report["weighted avg"]["f1-score"],
     }
@@ -283,8 +294,9 @@ def main(cfg: DictConfig) -> None:
     datasets = prepare_datasets(dataset, donor_splits, cfg.data.cv_fold, cfg)
     print(f"Loaded datasets: {datasets}")
 
-    # Create model
-    class_weights = load_class_weights(cfg)
+    # Compute or load class weights from training labels
+    train_labels = np.array(datasets["train"]["labels"])
+    class_weights = get_class_weights(cfg, train_labels)
     model = create_model(cfg, class_weights)
 
     trainer_params = {
