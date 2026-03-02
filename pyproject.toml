@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tissueformer"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "jupyter",
+    "numpy",
+    "anndata",
+    "pandas",
+    "seaborn",
+    "wandb",
+    "pynrrd",
+    "scikit-learn",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "transformers",
+    "datasets",
+    "evaluate",
+    "deepspeed",
+    "accelerate",
+    "loompy",
+    "isort",
+    "jax[cuda12]",
+    "absl-py",
+    "optax",
+    "jiwer",
+    "pymatreader",
+    "hydra-core",
+    "ccf-streamlines",
+    "colour-science",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }
+torchaudio = { index = "pytorch-cu121" }
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tissueformer*"]
