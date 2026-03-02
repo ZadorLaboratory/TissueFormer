@@ -166,3 +166,33 @@ class TestTokenization:
         assert "0" in splits["folds"]
         assert "train_donors" in splits["folds"]["0"]
         assert "test_donors" in splits["folds"]["0"]
+
+    def test_splits_only_mode(self, tmp_dir):
+        """splits_only=True should generate JSON files without tokenizing."""
+        from applications.covid.data.tokenize_cells import tokenize_dataset
+
+        h5ad_path = os.path.join(tmp_dir, "test.h5ad")
+        make_synthetic_h5ad(h5ad_path, n_cells=180, n_donors=12)
+
+        result = tokenize_dataset(
+            h5ad_path, tmp_dir, "test_covid",
+            nproc=1, n_splits=3, splits_only=True
+        )
+
+        # Should return None (no dataset created)
+        assert result is None
+
+        # Splits and label map should exist
+        splits_path = os.path.join(tmp_dir, "test_covid_donor_splits.json")
+        label_map_path = os.path.join(tmp_dir, "test_covid_label_map.json")
+        assert os.path.exists(splits_path)
+        assert os.path.exists(label_map_path)
+
+        # Dataset directory should NOT exist
+        dataset_path = os.path.join(tmp_dir, "test_covid.dataset")
+        assert not os.path.exists(dataset_path)
+
+        # Splits should be valid
+        with open(splits_path) as f:
+            splits = json.load(f)
+        assert len(splits["folds"]) == 3

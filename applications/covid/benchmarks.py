@@ -28,7 +28,6 @@ from sklearn.metrics import (
     roc_auc_score,
     classification_report,
 )
-from datasets import load_from_disk, DatasetDict
 import scipy.sparse
 
 
@@ -289,20 +288,14 @@ def main(cfg: DictConfig) -> None:
     setup_wandb(cfg)
 
     # Load donor splits
-    dataset_path = cfg.data.dataset_path
-    base_dir = os.path.dirname(dataset_path)
-    base_name = os.path.basename(dataset_path).replace(".dataset", "")
-
-    splits_path = os.path.join(base_dir, f"{base_name}_donor_splits.json")
-    with open(splits_path) as f:
+    with open(cfg.data.splits_path) as f:
         split_info = json.load(f)
 
     fold = cfg.data.cv_fold
     train_donors = split_info["folds"][str(fold)]["train_donors"]
     test_donors = split_info["folds"][str(fold)]["test_donors"]
 
-    # h5ad path
-    h5ad_path = os.path.join(base_dir, f"{cfg.dataset_name}_processed.h5ad")
+    h5ad_path = cfg.data.h5ad_path
 
     label_names = OmegaConf.to_container(cfg.data.label_names)
 

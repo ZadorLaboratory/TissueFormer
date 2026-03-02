@@ -19,31 +19,44 @@ import time
 import argparse
 import os
 import json
+import gc
 import numpy as np
 import anndata as ad
+from datasets import concatenate_datasets
 from sklearn.model_selection import StratifiedGroupKFold
 from pathlib import Path
 
 
+def _find_geneformer_file(candidates, flag_name):
+    """Search *candidates* in order; return the first that exists."""
+    for p in candidates:
+        if p.exists():
+            return str(p)
+    raise FileNotFoundError(
+        f"Could not locate a Geneformer file from candidates:\n"
+        + "\n".join(f"  {p}" for p in candidates)
+        + f"\nInstall geneformer or provide --{flag_name}."
+    )
+
+
 def _find_geneformer_token_dict():
     """Locate the Geneformer token dictionary from the installed package."""
-    try:
-        import geneformer
-        pkg_dir = Path(geneformer.__file__).parent
-        # Try the standard token_dictionary.pkl first
-        candidates = [
-            pkg_dir / "token_dictionary.pkl",
-            pkg_dir / "util" / "files" / "tokens" / "geneformer_token_dict.pkl",
-        ]
-        for p in candidates:
-            if p.exists():
-                return str(p)
-    except ImportError:
-        pass
-    raise FileNotFoundError(
-        "Could not find Geneformer token dictionary. "
-        "Install geneformer or provide --token-dictionary-file."
-    )
+    import geneformer
+    pkg_dir = Path(geneformer.__file__).parent
+    return _find_geneformer_file([
+        pkg_dir / "token_dictionary.pkl",
+        pkg_dir / "util" / "files" / "tokens" / "geneformer_token_dict.pkl",
+    ], "token-dictionary-file")
+
+
+def _find_geneformer_gene_median():
+    """Locate the Geneformer *human* gene median dictionary."""
+    import geneformer
+    pkg_dir = Path(geneformer.__file__).parent
+    return _find_geneformer_file([
+        pkg_dir / "gene_median_dictionary.pkl",
+        pkg_dir / "util" / "files" / "medians" / "geneformer_median_dict.pkl",
+    ], "gene-median-file")
 
 
 LABEL_MAP_3CLASS = {"control": 0, "mild": 1, "severe": 2}
@@ -83,7 +96,8 @@ def get_donor_splits(adata, n_splits=5, seed=42):
 
 def tokenize_dataset(h5ad_path, output_directory, output_prefix,
                      nproc=8, raw_counts=False, n_splits=5, seed=42,
-                     token_dictionary_file=None):
+                     token_dictionary_file=None, gene_median_file=None,
+                     splits_only=False):
     """Tokenize an h5ad file and save CV split metadata.
 
     All cells are tokenized once into a single HF Dataset.  Fold
@@ -95,6 +109,11 @@ def tokenize_dataset(h5ad_path, output_directory, output_prefix,
     if token_dictionary_file is None:
         token_dictionary_file = _find_geneformer_token_dict()
     print(f"Using token dictionary: {token_dictionary_file}")
+
+    # Resolve gene median file (human Ensembl IDs, not the default mouse one)
+    if gene_median_file is None:
+        gene_median_file = _find_geneformer_gene_median()
+    print(f"Using gene median file: {gene_median_file}")
 
     print(f"Loading {h5ad_path}...")
     adata = ad.read_h5ad(h5ad_path)
@@ -136,6 +155,11 @@ def tokenize_dataset(h5ad_path, output_directory, output_prefix,
     with open(label_map_path, "w") as f:
         json.dump(label_map, f, indent=2)
 
+    if splits_only:
+        print(f"Splits-only mode: saved splits and label map, skipping tokenization.")
+        print(f"Total time: {time.time() - t0:.1f}s")
+        return None
+
     # Metadata columns to preserve during tokenization
     label_dict = {
         "donor_id": "donor_id",
@@ -153,6 +177,7 @@ def tokenize_dataset(h5ad_path, output_directory, output_prefix,
     tk = TranscriptomeTokenizer(
         label_dict,
         nproc=nproc,
+        gene_median_file=gene_median_file,
         token_dictionary_file=token_dictionary_file,
         retain_counts=raw_counts,
         prepend_cls=False,  # Default Geneformer token dict has no <cls> token
@@ -207,12 +232,16 @@ if __name__ == "__main__":
                         help="Number of processes for tokenization")
     parser.add_argument("--raw-counts", action="store_true",
                         help="Retain raw counts in tokenized dataset")
+    parser.add_argument("--splits-only", action="store_true",
+                        help="Only generate donor_splits.json and label_map.json, skip tokenization")
     parser.add_argument("--n-splits", type=int, default=5,
                         help="Number of CV folds")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for splits")
     parser.add_argument("--token-dictionary-file", type=str, default=None,
                         help="Path to token dictionary pickle. If None, uses Geneformer default.")
+    parser.add_argument("--gene-median-file", type=str, default=None,
+                        help="Path to gene median dictionary pickle. If None, uses Geneformer human default.")
     args = parser.parse_args()
 
     tokenize_dataset(
@@ -224,4 +253,6 @@ if __name__ == "__main__":
         n_splits=args.n_splits,
         seed=args.seed,
         token_dictionary_file=args.token_dictionary_file,
+        gene_median_file=args.gene_median_file,
+        splits_only=args.splits_only,
     )

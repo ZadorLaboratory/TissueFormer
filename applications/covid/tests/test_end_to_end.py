@@ -58,7 +58,8 @@ class TestEndToEnd:
 
     def test_tokenize_and_benchmark(self, tmp_dir):
         """Tokenize, then run benchmarks on the same splits."""
-        from applications.covid.data.tokenize_cells import tokenize_and_split
+        import json
+        from applications.covid.data.tokenize_cells import tokenize_dataset
         from applications.covid.benchmarks import aggregate_donor_features
         from sklearn.ensemble import RandomForestClassifier
         from sklearn.linear_model import LogisticRegression
@@ -68,19 +69,20 @@ class TestEndToEnd:
         make_tiny_h5ad(h5ad_path, n_donors=12, cells_per_donor=20)
 
         # 2. Tokenize with 2-fold CV
-        ds = tokenize_and_split(
-            h5ad_path, tmp_dir, "e2e_test", cv_fold=0,
+        ds = tokenize_dataset(
+            h5ad_path, tmp_dir, "e2e_test",
             nproc=1, n_splits=2
         )
 
-        assert "train" in ds
-        assert "test" in ds
-        assert len(ds["train"]) > 0
-        assert len(ds["test"]) > 0
+        assert ds is not None
+        assert len(ds) > 0
 
-        # 3. Run benchmarks
-        train_donors = list(set(ds["train"]["donor_id"]))
-        test_donors = list(set(ds["test"]["donor_id"]))
+        # 3. Load splits and get train/test donors
+        splits_path = os.path.join(tmp_dir, "e2e_test_donor_splits.json")
+        with open(splits_path) as f:
+            split_info = json.load(f)
+        train_donors = split_info["folds"]["0"]["train_donors"]
+        test_donors = split_info["folds"]["0"]["test_donors"]
 
         for feat_type in ["pseudobulk", "cell_type_histogram"]:
             train_feat, train_labels, _ = aggregate_donor_features(
@@ -113,35 +115,45 @@ class TestEndToEnd:
 
     def test_donor_sampler_with_tokenized_data(self, tmp_dir):
         """DonorGroupSampler should work with tokenized dataset."""
-        from applications.covid.data.tokenize_cells import tokenize_and_split
+        import json
+        from applications.covid.data.tokenize_cells import tokenize_dataset
         from tissueformer.samplers import DonorGroupSampler
 
         h5ad_path = os.path.join(tmp_dir, "test.h5ad")
         make_tiny_h5ad(h5ad_path, n_donors=6)
 
-        ds = tokenize_and_split(
-            h5ad_path, tmp_dir, "e2e_test", cv_fold=0,
+        ds = tokenize_dataset(
+            h5ad_path, tmp_dir, "e2e_test",
             nproc=1, n_splits=2
         )
 
+        # Split into train using donor splits
+        splits_path = os.path.join(tmp_dir, "e2e_test_donor_splits.json")
+        with open(splits_path) as f:
+            split_info = json.load(f)
+        train_donors = set(split_info["folds"]["0"]["train_donors"])
+        donor_ids = np.array(ds["donor_id"])
+        train_mask = np.isin(donor_ids, list(train_donors))
+        train_ds = ds.select(np.where(train_mask)[0])
+
         # Test with group_size=4
         sampler = DonorGroupSampler(
-            ds["train"], batch_size=16, group_size=4, seed=0
+            train_ds, batch_size=16, group_size=4, seed=0
         )
         indices = list(sampler)
         assert len(indices) > 0
         assert len(indices) % 4 == 0
 
         # Verify donor purity
-        donor_ids = np.array(ds["train"]["donor_id"])
+        train_donor_ids = np.array(train_ds["donor_id"])
         for start in range(0, min(len(indices), 40), 4):
             group = indices[start:start + 4]
-            donors = set(donor_ids[group])
+            donors = set(train_donor_ids[group])
             assert len(donors) == 1
 
         # Test with group_size=1
         sampler1 = DonorGroupSampler(
-            ds["train"], batch_size=16, group_size=1, seed=0
+            train_ds, batch_size=16, group_size=1, seed=0
         )
         indices1 = list(sampler1)
-        assert len(indices1) == len(ds["train"])
+        assert len(indices1) == len(train_ds)

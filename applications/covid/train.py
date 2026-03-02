@@ -283,12 +283,7 @@ def main(cfg: DictConfig) -> None:
             "tokenize_cells.py (tokenize_dataset) to produce a single Dataset."
         )
 
-    splits_path = os.path.join(
-        os.path.dirname(cfg.data.dataset_path),
-        os.path.basename(cfg.data.dataset_path).replace(".dataset", "")
-        + "_donor_splits.json",
-    )
-    with open(splits_path) as f:
+    with open(cfg.data.splits_path) as f:
         donor_splits = json.load(f)
 
     datasets = prepare_datasets(dataset, donor_splits, cfg.data.cv_fold, cfg)

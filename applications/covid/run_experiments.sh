@@ -3,9 +3,7 @@
 # Runs tokenization, TissueFormer training, and benchmarks across
 # all datasets, CV folds, and group sizes.
 
-set -euo pipefail
-
-cd "$(dirname "$0")"
+# set -euo pipefail
 
 DATASETS=(combat ren stevenson)
 N_FOLDS=5
@@ -21,14 +19,25 @@ for dataset in "${DATASETS[@]}"; do
         continue
     fi
 
-    # Tokenize once per dataset (no fold splitting)
+    # Generate donor splits (fast, no tokenization needed)
+    if [ ! -f "data/${dataset}_donor_splits.json" ]; then
+        echo "Generating splits for ${dataset}..."
+        python data/tokenize_cells.py \
+            --h5ad_path "$H5AD_PATH" \
+            --output_directory data \
+            --output_prefix "$dataset" \
+            --splits-only
+    else
+        echo "Splits data/${dataset}_donor_splits.json already exist, skipping"
+    fi
+
+    # Tokenize for TissueFormer (skip if already done)
     if [ ! -d "data/${dataset}.dataset" ]; then
         echo "Tokenizing ${dataset}..."
         python data/tokenize_cells.py \
             --h5ad_path "$H5AD_PATH" \
             --output_directory data \
             --output_prefix "$dataset" \
-            --raw-counts \
             --nproc 8
     else
         echo "Dataset data/${dataset}.dataset already exists, skipping tokenization"
@@ -45,6 +54,7 @@ for dataset in "${DATASETS[@]}"; do
                     dataset_name="${dataset}" \
                     data.group_size=1 \
                     data.dataset_path="data/${dataset}.dataset" \
+                    data.splits_path="data/${dataset}_donor_splits.json" \
                     data.cv_fold="${fold}" \
                     model.pretrained_type="single-cell" \
                     training.remove_unused_columns=true \
@@ -54,6 +64,7 @@ for dataset in "${DATASETS[@]}"; do
                     dataset_name="${dataset}" \
                     data.group_size="${gs}" \
                     data.dataset_path="data/${dataset}.dataset" \
+                    data.splits_path="data/${dataset}_donor_splits.json" \
                     data.cv_fold="${fold}" \
                     seed="${fold}"
             fi
@@ -65,7 +76,8 @@ for dataset in "${DATASETS[@]}"; do
             python benchmarks.py \
                 dataset_name="${dataset}" \
                 data.group_size="${gs}" \
-                data.dataset_path="data/${dataset}.dataset" \
+                data.h5ad_path="data/${dataset}_processed.h5ad" \
+                data.splits_path="data/${dataset}_donor_splits.json" \
                 data.cv_fold="${fold}"
         done
     done
