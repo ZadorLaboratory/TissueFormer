@@ -16,6 +16,7 @@ rms_layernorm: false
 detach_bert_embeddings: false  # Whether to detach BERT embeddings
 single_cell_loss_after_set: false  # Whether to apply single-cell loss after set transformer
 single_cell_vs_group_weight: 0.5
+bert_micro_batch_size: 0  # 0 = disabled; set to e.g. 64 to reduce peak GPU memory
 
 # Position encoding parameters
 relative_positions:

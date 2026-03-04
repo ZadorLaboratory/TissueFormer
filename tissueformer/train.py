@@ -108,6 +108,7 @@ def create_model(config: DictConfig, class_weights: Optional[torch.Tensor] = Non
             position_encoding_dim=config.model.relative_positions.encoding_dim,
             position_encoding_type=config.model.relative_positions.encoding_type,
             rms_layernorm=config.model.get("rms_layernorm", False),
+            bert_micro_batch_size=config.model.get("bert_micro_batch_size", 0),
             **(config.model.get("bert_params", {}) if config.model.pretrained_type == "none" else {})
         )
         

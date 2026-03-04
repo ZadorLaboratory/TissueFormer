@@ -67,6 +67,7 @@ def create_model(config: DictConfig, class_weights=None):
             single_cell_vs_group_weight=config.model.single_cell_vs_group_weight,
             use_relative_positions=False,
             rms_layernorm=config.model.get("rms_layernorm", False),
+            bert_micro_batch_size=config.model.get("bert_micro_batch_size", 0),
         )
         model = TissueFormer(model_config)
 

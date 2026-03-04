@@ -2,11 +2,11 @@
 pretrained_type: "bert_only"  # Options: "none", "bert_only", "single-cell"
 
 # Geneformer pretrained BERT weights
-bert_path_or_name: "/grid/zador/data_norepl/Ari/transcriptomics/geneformer_models/geneformer-12L-30M"
+bert_path_or_name: "/home/benjami/mnt/zador_data_norepl/ari/transcriptomics/geneformer_models/geneformer-12L-30M/models"
 
 # Model architecture parameters
 num_labels: 3  # control, mild, severe
-num_set_layers: 2  # Simpler task than 290-class brain annotation
+num_set_layers: 4  # Simpler task than 290-class brain annotation
 set_hidden_size: 256
 num_attention_heads: 8
 dropout_prob: 0.1
@@ -16,6 +16,7 @@ rms_layernorm: false
 detach_bert_embeddings: false
 single_cell_loss_after_set: false
 single_cell_vs_group_weight: 0.0  # No single-cell auxiliary loss
+bert_micro_batch_size: 0  # 0 = disabled; set to e.g. 64 to reduce peak GPU memory
 
 # Position encoding (disabled for donor grouping)
 relative_positions:

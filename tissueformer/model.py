@@ -37,6 +37,7 @@ class TissueFormerConfig(PretrainedConfig):
         position_encoding_dim: int = 32,  # Must ensure (set_hidden_size + position_encoding_dim) is divisible by num_attention_heads
         position_encoding_type: str = "mlp",
         rms_layernorm: bool = False,
+        bert_micro_batch_size: int = 0,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -45,7 +46,7 @@ class TissueFormerConfig(PretrainedConfig):
             self.bert_config = BertConfig.from_pretrained(bert_config)
         else:
             self.bert_config = bert_config or BertConfig()
-            
+
         self.num_labels = num_labels
         self.num_set_layers = num_set_layers
         self.set_hidden_size = set_hidden_size
@@ -59,6 +60,7 @@ class TissueFormerConfig(PretrainedConfig):
         self.position_encoding_dim = position_encoding_dim
         self.position_encoding_type = position_encoding_type
         self.rms_layernorm = rms_layernorm
+        self.bert_micro_batch_size = bert_micro_batch_size
 
 class SetTransformerLayer(nn.Module):
     """Simple Set Transformer layer."""
@@ -233,6 +235,46 @@ class TissueFormer(BertPreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
             
+    def _forward_bert(self, flat_input_ids, flat_attention_mask, flat_token_type_ids,
+                      flat_position_ids, head_mask, inputs_embeds,
+                      output_attentions, output_hidden_states):
+        """Run BERT, optionally in micro-batches to reduce peak GPU memory."""
+        micro_bs = self.config.bert_micro_batch_size
+        total = flat_input_ids.size(0)
+
+        # Fast path: micro-batching disabled or unnecessary
+        if micro_bs <= 0 or total <= micro_bs:
+            outputs = self.bert(
+                input_ids=flat_input_ids,
+                attention_mask=flat_attention_mask,
+                token_type_ids=flat_token_type_ids,
+                position_ids=flat_position_ids,
+                head_mask=head_mask,
+                inputs_embeds=inputs_embeds,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=True,
+            )
+            return outputs.pooler_output
+
+        # Micro-batched path
+        embeddings = []
+        for start in range(0, total, micro_bs):
+            end = start + micro_bs
+            out = self.bert(
+                input_ids=flat_input_ids[start:end],
+                attention_mask=flat_attention_mask[start:end] if flat_attention_mask is not None else None,
+                token_type_ids=flat_token_type_ids[start:end] if flat_token_type_ids is not None else None,
+                position_ids=flat_position_ids[start:end] if flat_position_ids is not None else None,
+                head_mask=head_mask,
+                inputs_embeds=inputs_embeds,
+                output_attentions=False,
+                output_hidden_states=False,
+                return_dict=True,
+            )
+            embeddings.append(out.pooler_output)
+        return torch.cat(embeddings, dim=0)
+
     def forward(
             self,
             input_ids: torch.Tensor,
@@ -270,21 +312,12 @@ class TissueFormer(BertPreTrainedModel):
         flat_token_type_ids = token_type_ids.view(-1, seq_length) if token_type_ids is not None else None
         flat_position_ids = position_ids.view(-1, seq_length) if position_ids is not None else None
         
-        # Process through BERT
-        bert_outputs = self.bert(
-            input_ids=flat_input_ids,
-            attention_mask=flat_attention_mask,
-            token_type_ids=flat_token_type_ids,
-            position_ids=flat_position_ids,
-            head_mask=head_mask,
-            inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=True,
+        # Process through BERT (with optional micro-batching)
+        sentence_embeddings = self._forward_bert(
+            flat_input_ids, flat_attention_mask, flat_token_type_ids,
+            flat_position_ids, head_mask, inputs_embeds,
+            output_attentions, output_hidden_states,
         )
-            
-        # Get CLS tokens and reshape
-        sentence_embeddings = bert_outputs[1]  # Pooled output
 
         # Potentially detach embeddings
         if self.detach_bert_embeddings:
