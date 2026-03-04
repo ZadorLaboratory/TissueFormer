@@ -1,0 +1,236 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% ELIFE ARTICLE TEMPLATE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% PREAMBLE
+\documentclass\[9pt,lineno]{elife}
+% Use the onehalfspacing option for 1.5 line spacing
+% Use the doublespacing option for 2.0 line spacing
+% Please note that these options may affect formatting.
+% Additionally, the use of the \newcommand function should be limited.
+
+\usepackage{lipsum} % Required to insert dummy text
+\usepackage\[version=4]{mhchem}
+\usepackage{siunitx}
+\DeclareSIUnit\Molar{M}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% ARTICLE SETUP
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{TissueFormer: a neural network for labeling tissue from grouped single-cell RNA profiles}
+
+\author\[1]{Ari S. Benjamin}
+\author\[1]{Anthony Zador}
+\affil\[1]{Cold Spring Harbor Laboratory, Cold Spring Harbor, NY 11724}
+
+\corr{[benjami@cshl.edu](mailto:benjami@cshl.edu)}{AB}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% ARTICLE START
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+Single-cell RNA sequencing technologies have enabled unprecedented insights into gene expression and promise a new generation of clinical diagnostics. Usually, predictive methods for single‑cell data treat cells as isolated examples from a population and label one cell at a time. However, the diversity of cells within a population can also be highly informative about tissue properties and individual outcomes. Here, to unlock population signals while preserving single‑cell resolution, we designed TissueFormer, a Transformer‑based neural network that annotates grouped ensembles of single‑cell RNA profiles.
+When applied to annotate cortical regions from spatial transcriptomic data in mice, TissueFormer outperformed both single‑cell models and traditional machine‑learning benchmarks and, furthermore, improved steadily with the size of observed groups. This enables the automated construction of high‑resolution brain‑region maps in individual animals directly from spatial transcriptomic data. Beyond neuroanatomical mapping, TissueFormer has potential applications in any context in which cellular diversity and tissue‑level organization critically influence phenotypes.
+\end{abstract}
+
+\section{Introduction}
+
+Biological tissues attain their unique functions through the gene‑expression profiles of individual cells as well as the specific proportions and spatial arrangements of different cell types. In the blood, for example, several distinct cell types exist in precisely regulated proportions, each with specialized roles in immunity and oxygen transport. Likewise, in the cerebral cortex the relative abundance of cell types varies systematically across functional areas \citep{tasic\_shared\_2018}. Normal physiological function requires the careful maintenance of this cellular balance, whereas deviations in cellular composition underlie numerous diseases. Methods for detecting imbalances in cell‑type proportions, such as complete blood count (CBC) tests, already form the basis of key diagnostics in clinical medicine. For instance, shifts in white‑blood‑cell proportions signal infection or inflammation, while unusual cell populations characterize diseases such as leukemia.
+
+Advances in high‑throughput measurements promise a new generation of high‑precision tests and diagnostics. Single‑cell RNA‑sequencing technologies now enable comprehensive profiling of gene‑expression patterns at single‑cell resolution across diverse tissues and conditions \citep{svensson\_exponential\_2018}. To better extract usable information from this rich data modality, there has recently been considerable interest in the development of neural‑network models of RNA transcription \citep{lopez\_deep\_2018, connell\_single-cell\_2022, cui\_scgpt\_2023, theodoris\_transfer\_2023, rosen\_universal\_2023, yuan\_cell-ontology\_2024, schaar\_nicheformer\_2024, ito\_mouse-geneformer\_2024, hsieh\_scemb\_2024}, reviewed in \citep{szalata\_transformers\_2024}. Compared to heuristic assays, neural networks offer a flexible family of learnable functions that can discover new predictive patterns from labeled data. Current generations of models balance expressive flexibility with domain‑specific knowledge by first \emph{pretraining} with an unsupervised task on large datasets before fine‑tuning on specific tasks. This \emph{foundation‑model} strategy is promising for single‑cell transcriptomics, given the abundance of publicly available data across species, and often \textit{shows} improved performance when adapted for tasks such as cell‑type classification or disease‑state prediction.
+
+Current foundation models are fundamentally single‑cell in design: they take the gene‑expression profile of an individual cell as input and produce a label specific to that cell. As a result, they cannot detect signals that emerge only from the \textit{composition} of cells within a tissue sample. Any diagnostic or biological feature that depends on the relative abundance of multiple cell types or on interactions between them cannot be captured by models that consider cells in isolation. This class of compositional features is often highly informative in both research and clinical contexts. For example, standard clinical diagnostics such as CBC assays are based on population‑level ratios of white‑blood‑cell types, including the neutrophil‑to‑lymphocyte ratio, a widely used marker of inflammation that predicts disease outcomes across multiple conditions \citep{templeton\_prognostic\_2014}. Although this feature is present in single‑cell transcriptomic data, it is not accessible to single‑cell foundation models. Addressing this limitation requires the development of models that observe and reason about collections of cells while still leveraging the power of pre‑trained foundation models.
+
+Here, we present TissueFormer, a neural‑network architecture that analyzes groups of single‑cell RNA profiles collectively while utilizing knowledge embedded in pre‑trained single‑cell foundation models. TissueFormer observes multiple cells simultaneously and can be trained to predict population‑level properties such as tissue identity or disease state. The model incorporates a module based on the Geneformer architecture for single‑cell analysis \citep{theodoris\_transfer\_2023}, which can be initialized with pre‑trained weights. To validate our approach, we applied TissueFormer to annotating regions of the mouse cortex from spatial transcriptomic data. We found that TissueFormer outperformed both standard bioinformatic methods and fine‑tuned single‑cell foundation models. Furthermore, its performance scaled roughly logarithmically with the number of cells provided as a group, demonstrating the utility of observing multiple cells. These results highlight the importance of tissue‑level features in transcriptomic analysis and establish a framework for integrating single‑cell foundation models into higher‑order biological investigations.
+
+\section{Results}
+
+Our primary goal was to design and evaluate a model that is broadly applicable to the problem of tissue annotation from single‑cell data. To arrive there, we first describe the particularities of this problem that make it challenging for standard methods. These aspects motivate the design choices of TissueFormer. The section concludes with the quantitative and qualitative evaluation of TissueFormer as applied to cortical annotation.
+
+\subsection{Multi‑cell problem setting}
+
+A typical problem in single‑cell analysis is the relationship between gene counts in each cell and a cellular property such as cell‑type identity (\FIG{fig1}a). Denoting the cell‑by‑gene matrix of counts as \$C\$, this problem seeks a function \$f\$ that maps each row \$C\_i\$ (a cell) to a particular value \$y\_i\$ corresponding to a label—for example, the cortical area from which a given cell was obtained:
+\begin{equation}
+f(C\_i)=y\_i
+\end{equation}
+
+In some settings, it is advantageous to use information from many cells. In this multi‑cell setting, the characteristic equation relates sets of cells to labels. For spatial transcriptomic data, for example, a set might refer to a group of cells within some spatial distance of one another. Denoting \$G\_i\$ as the \$i\$th such group and \${c \in G\_i}\$ as the set of cells in this group, the classification or regression problem seeks a function \$f\$ that maps each set of cells to its label \$y\_i\$:
+\begin{equation}
+f({c \in G\_i}) = y\_i
+\end{equation}
+
+The single‑cell problem in Equation\~1 is well studied. Methods from the standard arsenal of machine learning are all applicable, with neighbor‑voting strategies being one often‑used approach \citep{crow\_characterizing\_2018}. More recently, there has been considerable interest in neural‑network models tailored for transcriptomic data. These flexible methods are most successful on very large datasets. If the labels \$y\_i\$ are not available for many cells, it is also common to pre‑train these methods on large unlabeled datasets of gene counts \$C\$ using an unsupervised objective to form a foundation model. This can yield better performance with fewer labeled training examples, assuming an appropriate pre‑training objective can be devised.
+
+The group‑prediction problem in Equation\~2 could be tackled with a range of strategies. One might simply isolate the cells and average their predictions, effectively treating the task as a single‑cell problem followed by post‑hoc pooling. Alternatively, one could first average the RNA‑count data across cells in a group before training a model, thus creating a \emph{pseudobulk} profile resembling the results of a bulk‑tissue sequencing experiment. These two strategies reverse the order of operations, but both attempt to resolve a fundamental difficulty of the multi‑cell problem: its dimensionality. Relative to the single‑cell problem, the dimensionality of input examples increases from the number of genes \$D\$ to \$D\times|G|\$, where \$|G|\$ is the number of cells in a group. Meanwhile, the number of independent labels decreases from the total number of cells to the number of disjoint groups, i.e., from \$N\$ to \$\frac{N}{|G|}\$. The ratio of input dimensions to independent examples—one proxy for problem difficulty—increases as \$|G|^2\$. Pseudobulk and pooling strategies are effective at reducing dimensionality, thus allowing better generalization, but they discard information that could be critical in multi‑cell problems.
+
+To fully exploit single‑cell data, a model should attend to any aspect of each cell's full RNA transcriptome while comparing across the population. These criteria are not met by pseudobulk or pooling methods, which both obscure population variance and ignore compositional signals. Neither are they met by regressing only from assigned cell types, as cell types are fixed, non‑adjustable representations of single‑cell profiles incapable of capturing transcriptional dysregulation within cell types. Each of these design criteria informed our development of the TissueFormer architecture.
+
+\subsection{TissueFormer architecture}
+
+\begin{figure}
+\begin{fullwidth}
+\includegraphics\[width=0.95\linewidth]{figures/figure\_1 copy.pdf}
+\caption{TissueFormer is a Transformer‑based neural network that analyzes groups of single‑cell RNA profiles. (a) Single‑cell foundation models focus on cellular targets, yet many tissue properties relate to cellular diversity. (b) TissueFormer learns to extract critical information from each cell into a cell‑embedding vector. The module that extracts these embeddings is architecturally identical to Geneformer, a single‑cell foundation model. First, cells are processed by a normalized rank‑ordering of their genes into a \`\`sentence'' of gene tokens, prefixed by a \texttt{<cls>} token to pool gene information, then processed by several Transformer layers. (c) Experiments in this manuscript use a pretrained single‑cell model we call \emph{Murine Geneformer}, created by adapting the 12‑layer Geneformer model (pretrained on human cells) to mouse cells via pairing orthologous genes and further pretraining. (d) TissueFormer architecture. Cell embeddings for all cells in a group are fed to six Transformer encoding units before average pooling and a linear readout.}
+\label{fig\:fig1}
+\end{fullwidth}
+\end{figure}
+
+TissueFormer is a neural‑network architecture tailored for groups of single‑cell RNA‑transcriptomic profiles (\FIG{fig1}). It can attend to information within each cell's relative gene‑expression profile while also looking across cells to extract information from the diversity and frequency of gene‑expression profiles in the group. Architecturally, this is accomplished by first applying a \emph{single‑cell module} to extract information from each cell, then attending across cells in subsequent layers. Although this combination of intra‑ and inter‑cell expressivity creates a high‑dimensional regression problem, the bottleneck architecture and the ease of loading pre‑trained single‑cell models into the cell‑embedding module mitigate this challenge.
+
+The core building block of TissueFormer is the Transformer block implementing self‑attention \citep{vaswani\_attention\_2017}. Compared with older neural‑network architectures like multilayer perceptrons (MLPs), Transformers are distinguished by the shape of their inputs. Whereas an MLP observes vector‑shaped inputs (e.g., a vector of gene counts), Transformers operate on lists of vectors—that is, matrix‑shaped inputs. Self‑attention selects which vectors in the list are most relevant in the current context.
+For single‑cell data to be compatible with Transformers, each cell's vector of gene counts \$c\_i\$ must be expanded into a list of vectors. Multiple strategies are possible, as reviewed in \cite{szalata\_transformers\_2024}. Here we use a rank‑ordering approach following Geneformer \citep{theodoris\_transfer\_2023}. Each cell's expressed genes are ordered by their relative expression normalized by their median expression in a pretraining corpus. Each gene name in this ordered list is then mapped to a high‑dimensional embedding vector via a learnable dictionary, thus creating the requisite list of vectors. Although alternatives to rank encoding have been tested in other foundation models, rank encoding is common in bioinformatics pipelines and has generally been found robust to common experimental variability \citep{ballouz\_guidance\_2015}.
+
+The single‑cell module within TissueFormer compresses each cell's unique and relevant information into a \textit{cell embedding} for later processing (\FIG{fig1}b). This is achieved by prefixing each cell with a special \texttt{<cls>} token, following standard design choices \citep{devlin\_bert\_2019}. The \texttt{<cls>} token instantiates a workspace for accumulating information from all genes. During learning, any error‑corrective signals are bottlenecked through the cell embedding, ensuring it collects the necessary information. In sum, the cell‑embedding vector passed to later layers can be written as
+\begin{equation}
+\textbf{CellEmb}\[c\_i] = \textbf{SingleCellModule} \[\textbf{RankEncoding}(c\_i)]\[\text{<cls>}].
+\end{equation}
+
+Because the single‑cell module shares the Geneformer architecture, any trained single‑cell model can be loaded into this module. In this work, unless otherwise indicated, all experiments use weights from the 12‑layer Geneformer model, a BERT network trained with a masked‑prediction objective on 30 million human cells \citep{theodoris\_transfer\_2023}. We further pre‑trained these weights on a collection of mouse‑tissue datasets totaling six million cells (\FIG{fig1}c). To facilitate cross‑species transfer, we initialized mouse‑gene tokens with the embeddings of their human orthologs where available. We call this resulting pretrained single‑cell model \emph{Murine Geneformer}.
+
+TissueFormer attends to information across cells by processing each cell embedding with several additional Transformer layers (\FIG{fig1}d). At this stage, it is invariant to the order of cells presented, treating them as an unordered set. The output of any Transformer is inherently equivariant with respect to the input order; to achieve invariance, we average‑pool the outputs across cells. A final linear layer performs classification. Collectively, TissueFormer can be summarized as
+\begin{equation}
+y\_i = \textbf{LinearClassifier}\bigl\[\textbf{AvgPool}\bigl\[\textbf{Transformers}\[{\textbf{CellEmb}\[c\_j] \mid c\_j \in G\_i}]\bigr]\bigr].
+\end{equation}
+
+\subsection{Cortical annotation}
+
+The mammalian brain is often partitioned into regions with distinct functional roles, connectivity, and cellular composition. In any particular brain, variations in neuroanatomy may arise from genetic factors as well as from the animal's environment. These variations underlie the evolution of innate behavior and reflect the aptitude for adaptation within a lifetime.
+
+Current methods for annotating individual brains have well‑known limitations. One common approach is to register a brain to the average‑brain template of the Common Coordinate Framework (CCF), a 3‑D reference constructed from more than 1,000 mouse brains \citep{wang\_allen\_2020}. Once transformed into CCF coordinates, one can visualize the area boundaries of the Allen Brain Atlas, which again reflect a canonical, average brain. The drawback is that this obscures individual variation, especially differences in the relative sizes of areas. A more targeted approach employs experimental methods that interrogate only small brain regions—for example, focal viral projection tracing \citep{xu\_viral\_2020} or two‑photon functional imaging targeting a specific modality such as vision \citep{kalatsky\_new\_2003}. While accurate, these methods’ limited spatial scope prevents a holistic assessment of anatomy across the entire cortex.
+
+An alternative strategy that can balance whole‑brain coverage with single‑animal individuality is to perform \textit{in situ} single‑cell RNA sequencing across a single brain. This strategy shares a philosophy with early brain‑mapping efforts such as Brodmann’s areas \citep{brodmann\_vergleichende\_1909, zilles\_centenary\_2010}. The technical efficiency of spatial transcriptomics is now high enough to cover an entire mouse brain at sufficient cellular density and inexpensive enough to cover multiple brains in a single study \citep{chen\_whole-cortex\_2024}. Given such datasets, the remaining challenges are computational.
+
+To investigate whether TissueFormer could meet these challenges, we applied it to predict the brain region of cells from their transcriptomes in a recent whole‑brain spatial‑transcriptomics dataset \citep{chen\_whole-cortex\_2024}. Over one million cells, largely in the left hemisphere, were profiled in each of eight animals, four of which were raised under normal conditions. Each cell profile contains counts from a panel of 104 genes selected for their ability to distinguish excitatory‑cell clusters. With multiple brains and whole‑cortex coverage in one hemisphere, this dataset enables testing whether individual neuroanatomical differences can be resolved.
+
+In addition to gene counts, the dataset includes each cell’s location in several coordinate systems. Of particular interest is the location within the CCF. Each brain was registered to the CCF using software that defines a non‑rigid smooth deformation from raw slice coordinates. Once in CCF space, a brain can be associated with the Allen Brain Atlas to obtain area annotations \citep{wang\_allen\_2020}. These CCF annotations provide the labels we used for training.
+
+It is important to note that CCF boundaries may not reflect ground‑truth neuroanatomy. While CCF registration accounts for overall brain shape, it does not capture finer differences such as relative area sizes or boundary shifts. Nevertheless, these labels are sufficiently accurate for comparing computational methods. It is also possible that \emph{errors} of a model trained on such data actually represent more‑accurate annotations than the CCF. We return to this possibility in \FIG{fig3}, where we examine TissueFormer’s predictions on held‑out brains.
+
+\subsubsection{Single‑cell profiles are not informative of cortical area}
+
+The benefit of integrating information across cells becomes clear when examining machine‑learning methods restricted to single‑cell observations. We split the data into training (90% of cells in three brains), validation (the remaining 10% of those brains), and a held‑out test brain (\FIG{fig2}b). We then trained several methods to predict the cortical area of a single cell from its transcriptome.
+
+The methods ranged in complexity from simple heuristics to modern foundation models (\FIG{fig2}c). We included logistic‑regression, random‑forest, and k‑nearest‑neighbors classifiers. These models map log‑transformed, z‑scored gene‑count vectors to labels, with hyperparameters tuned on the validation set. We also trained two models that observe only cell types. The \emph{cell‑type model} predicts a cell’s area based on the most common area among training cells of the same type. The \emph{cell‑type k‑nearest‑neighbor model} labels the target cell based on the areas of the \$k\$ closest neighbors of the same type. Finally, we fine‑tuned Murine Geneformer to predict area. This model outperformed all others, echoing findings that Transformer‑based models perform competitively on downstream tasks \citep{theodoris\_transfer\_2023}.
+
+Across these six models, none classified a cell’s cortical area with accuracy above 31%. This accords with previous findings that many cell types occur in similar proportions across large brain areas \citep{tasic\_shared\_2018, chen\_whole-cortex\_2024}. While some types are more localized (e.g., retrosplenial/anterior‑cingulate excitatory cells) and were predicted with higher accuracy, the overall average remained low. A 31% accuracy is insufficient for useful annotations, motivating our shift to models that integrate across cells.
+
+\begin{figure}
+\begin{fullwidth}
+\includegraphics\[width=0.95\linewidth]{figures/figure\_2\_copy.pdf}
+\caption{Accuracy of mouse‑cortex annotations. \textbf{a)} Cortical cells from coronal slices of one hemisphere (left, colored by area) visualized as a \`\`flatmap’’ projection. \textbf{b)} Models were evaluated using four‑fold cross‑validation with one brain held out for testing. \textbf{c)} Accuracy on the test brain when predicting the area of a single cell with various methods. \textbf{d)} An example cell group (\$N=256\$) in slice coordinates, colored by cell type. \textbf{e)} A sample of groups (\$N=32\$) in flatmap coordinates, here colored by the modal area of each group. \textbf{f)} Validation accuracy (10% of cells in three brains) as a function of group size for TissueFormer and logistic regression (LR) given pseudobulk transcription or a histogram of cell types. \textbf{g)} Test‑brain accuracy. Error bars in f–g represent the standard deviation across folds. \textbf{h)} Test‑brain accuracy of a TissueFormer model trained only on homogeneous groups of a single cell type.}
+\label{fig\:fig2}
+\end{fullwidth}
+\end{figure}
+
+\subsection{Annotating cell groups with TissueFormer}
+
+We next grouped cells to predict the area from each group. Specifically, we formed cylindrical columns extending inward from the cortical surface (\FIG{fig2}d–e). The cortex can be conceptualized as a layered sheet draped over the brain, with functional areas as slices. Thus, cortical columns contain cells from the same area. Our pipeline programmatically selects a single cell, then expands a column centered on that cell to the minimum radius containing \$N\$ cells. Each columnar group is labeled with the modal CCF annotation among its cells.
+
+We trained TissueFormer to predict each group’s label from its transcriptomes. Again, we used a 90/10 split across three brains for training/validation and held out one brain for testing. As we varied the group size from \$N=1\$ to \$N=256\$, validation accuracy rose from \~35% to nearly 80% (\FIG{fig2}f). On test brains, accuracy similarly rose from 30% to over 60% (\FIG{fig2}g). Providing cortical depth as additional input did not improve results, suggesting that this information was redundant (\FIGSUPP\[fig2]{supp\_fig2}f). Random guessing in this 42‑class task yields 8% accuracy owing to class imbalance. Similar results were seen with a class‑balanced objective (\FIGSUPP\[fig2]{supp\_fig2}c). These findings demonstrate that TissueFormer greatly outperforms single‑cell models in predicting tissue identity.
+
+As group size increased from \$N=1\$ to \$N=256\$, accuracy grew smoothly and roughly logarithmically, saturating near \$N=128\$. At this scale, groups often straddle boundaries, making group identity less meaningful; indeed, at \$N=256\$ over 70% of groups crossed a boundary (\FIGSUPP\[fig2]{supp\_fig2}g). Higher sampling densities would enable larger group sizes within smaller locales, likely raising the saturation point. Overall, the substantial performance gains with group size highlight the importance of integrating information across single cells.
+
+\paragraph{Effect of pretraining.}
+The cell‑embedding module was pretrained on tens of millions of cells. To examine pretraining’s impact, we trained a TissueFormer model from random initialization. Surprisingly, its performance was indistinguishable from the pretrained model across group sizes (\FIGSUPP\[fig2]{supp\_fig2}d), likely owing to the large labeled dataset. Varying the number of training cells confirmed that pretraining offers an advantage only below roughly one million training cells (\FIGSUPP\[fig2]{supp\_fig2}e). Thus, in this dataset, transfer learning from Murine Geneformer conferred no benefit.
+
+\paragraph{Comparison with standard methods.}
+We compared TissueFormer with two standard approaches for group data. First, pseudobulk analyses average single‑cell profiles within a group. Logistic regression on pseudobulk vectors underperformed TissueFormer yet showed a similar logarithmic accuracy increase with group size (\FIG{fig2}f). A random‑forest model underperformed logistic regression (\FIGSUPP\[fig2]{supp\_fig2}b). Second, we trained models on cell‑type composition, represented as histograms. Overall, type composition was less informative than pseudobulk expression (\FIG{fig2}f). Intriguingly, all methods displayed logarithmic scaling despite representing RNA transcription differently.
+
+To discern whether scaling arose from compositional signals or noise averaging, we artificially restricted group diversity by constructing groups containing only a single H2 cell type and retrained TissueFormer. Test accuracy scaled more slowly with group size (\FIG{fig2}h), supporting the role of compositional signals beyond noise reduction.
+
+The drop from validation to test accuracy could stem from multiple factors. One is differences in spatial coverage across brains, visible in \FIG{fig2}b, which can leave some areas unseen during training. Restricting evaluation to well‑sampled regions improved accuracy by only a few percentage points (\FIGSUPP\[fig2]{supp\_fig2}a). Another factor could be batch effects across brains, effectively making the test brain out‑of‑distribution. Finally, \emph{errors} might reflect genuine neuroanatomical differences correctly predicted by the model but mislabeled by CCF registration. We explore this possibility next.
+
+\begin{figure}
+\begin{fullwidth}
+\includegraphics\[width=0.95\linewidth]{figures/figure\_3 copy.pdf}
+\caption{Creation of cortical maps from spatial transcriptomics. \textbf{a)} Predicted cortical areas for each brain held out during testing. Predicted boundaries are black; CCF boundaries are white. Regions with low spatial density are masked. \textbf{b)} In brains 1 (top) and 2 (bottom), the somatosensory–motor boundary is displaced relative to the CCF but in opposite directions. \textbf{c)} Example slices containing the somatosensory–motor boundary. Points are cells, colored by cell type with similar types in similar colors. \textbf{d)} Spatial density along the slices of two cell types—L4/5 IT and L5 IT—in the same colors as (c). \textbf{e)} The cell‑type ratio (L4/5 IT / L5 IT) aligned to the CCF boundary (left) or the predicted boundary (right), showing inter‑animal shifts in CCF versus inter‑animal consistency in the predicted maps.}
+\label{fig\:fig3}
+\end{fullwidth}
+\end{figure}
+
+\subsection{Predicted cortical maps}
+
+After training on reference brains, TissueFormer can automatically create cortical maps from single‑cell data. \FIG{fig3}a shows the predicted maps for each of four animals treated as test sets. For visualization we used a class‑balanced model to impose a uniform prior across areas. All four maps broadly resemble the reference annotation (cf. \FIG{fig2}a), corroborating TissueFormer’s high accuracy.
+
+Closer inspection revealed notable differences. For example, the somatosensory–motor boundary is consistently shifted posterior‑laterally in brain 1 but anterior‑medially in brain 2 (\FIG{fig3}b). Similarly, the primary visual area shifts medially in brain 2 but laterally in brains 3 and 4. The primary auditory area shifts medially in brain 2 yet expands laterally in brain 4. These shifts largely explain the lower test‑brain \`\`accuracy’’ in \FIG{fig2}g.
+
+These discrepancies may not be \emph{errors} but rather genuine anatomy. The CCF represents an average over 1,000 brains, and registration cannot capture finer features. To test this, we focused on the somatosensory–motor boundary, canonically identified by differences in cell‑type composition. Motor cortex lacks a Layer 4 and thus shows a decrease in L4/5 IT cells relative to L5 IT cells. This boundary was visible in coronal slices colored by cell type (\FIG{fig3}c). Examining the densities of these types along slices in brains 1 and 2 (\FIG{fig3}d), we found that the CCF boundary was inconsistent across brains, whereas TissueFormer’s predicted boundary aligned with a consistent 1:1 ratio (\FIG{fig3}e). Thus, cell‑type distributions support the predicted atlas over the CCF.
+
+\paragraph{Gene‑expression verification.}
+We further examined genes with clear spatial boundaries (\FIGSUPP\[fig3]{supp\_fig\_genes}). Genes enriched in retrosplenial areas, such as \textit{Tshz2}, \textit{Coro6}, and \textit{Zfpm2} \citep{chen\_chemoarchitecture\_2022}, aligned better with the predicted retrosplenial boundaries than with the CCF. Genes selectively expressed in dorsal but not ventral retrosplenial cortex, such as \textit{Nell1} and \textit{Zmat4} \citep{hashikawa\_transcriptional\_2020}, showed the same pattern. Likewise, the sensory–motor border correlated with expression of \textit{Rorb1}, \textit{Brinp3}, and \textit{Rcan2} \citep{cederquist\_lmo4\_2013}, matching TissueFormer’s maps. These gene‑expression patterns lend further support to the predicted maps.
+
+\section{Discussion}
+
+We developed TissueFormer, a neural‑network architecture that attends to groups of single‑cell transcriptomes to predict a shared label. In predicting the brain area of nearby cells, TissueFormer achieved multi‑fold higher accuracy than methods that predict from individual cells, and it outperformed models trained on pseudobulk expression or cell‑type composition. These results underscore the value of integrating single‑cell information when inferring tissue‑level properties.
+
+TissueFormer provides a promising tool for automated brain mapping from spatial transcriptomics. Compared with CCF‑based labels, its predicted labels captured individual variability that correlated with local gene‑expression and cell‑type differences, despite being trained to predict CCF labels. This capability could expedite studies of individual variation in transcriptomically defined brain regions.
+
+A caveat is the lack of spatial‑transcriptomic datasets with ground‑truth animal‑specific annotations from complementary modalities such as projection tracing or functional imaging. Ideally, automated pipelines should be trained and validated on such data. Here, without access to them, we trained to predict imperfect CCF labels. While our empirical analyses suggest the model improves on the CCF, caution is warranted until models can be trained on more definitive datasets.
+
+In this study, we treated Allen Brain Atlas divisions as ground truth and did not ask whether alternative boundaries—or continuous variation—would be preferable. Current boundaries are widely used and important for shared nomenclature. However, automated identification of spatially homogeneous regions is an open question. Several algorithms address this \citep{dries\_giotto\_2021, zhao\_spatial\_2021, chitra\_mapping\_2025, hu\_spagcn\_2021, dong\_deciphering\_2022, singhal\_banksy\_2024, jackson\_identification\_2024}. When applied to mouse cortex, these methods often identify regions corresponding more to cortical layers than to functional areas \citep{ortiz\_molecular\_2020, partel\_automated\_2020, lee\_data-driven\_2025}. This is consistent with gene‑expression differences being larger across layers than across areas, whereas functional specialization varies more across areas than across layers \citep{mountcastle\_columnar\_1997, callaway\_local\_1998}. Given this dichotomy, we focused here on functional areas for practical utility and benchmarking. In future work it would be interesting to train TissueFormer with self‑supervised or contrastive objectives to discover brain areas \textit{de novo}.
+
+\section{Methods}
+
+\subsection{TissueFormer architecture}
+
+TissueFormer comprises two components: a single‑cell module and an aggregation module, forming an end‑to‑end trainable hierarchy above single‑cell foundation models.
+
+The single‑cell module is a 12‑layer BERT network with ReLU activations, hidden size 512, and a context window of up to 2,048 genes. Each Transformer uses eight attention heads and sinusoidal positional embeddings, matching Geneformer 12L \citep{theodoris\_transfer\_2023} to allow weight reuse.
+
+The aggregation module pools across cell embeddings. For each cell, we extract the first token (\texttt{<cls>}) from the single‑cell module. These embeddings are fed to six Transformer layers (order‑equivariant, without positional embeddings) with LayerNorm and GELU nonlinearities. The outputs are averaged across cells, producing a single vector per group, which is passed to a linear classifier. All classification tasks use cross‑entropy loss. We used the Adam optimizer with a learning rate of 0.001 and linear decay with a warm‑up ratio of 0.1.
+
+Our implementation relies on Hugging Face Transformers \citep{wolf\_transformers\_2020} and PyTorch \citep{paszke\_pytorch\_2019}, with Hydra for configuration management \citep{yadan\_hydra\_2019}.
+
+\subsection{Single‑cell pretraining}
+
+We adapted Geneformer 12L, originally trained on 30 million human cells, to mouse tissue. Using the CellXGene Census Explorer \citep{program\_cz\_2025}, we aggregated over six million mouse cells \citep{yao\_taxonomy\_2021, govek\_developmental\_2022, kozareva\_transcriptomic\_2021, steuernagel\_hypomapunified\_2022, yao\_transcriptomic\_2021}. We trained the same masked‑gene‑prediction objective for three epochs with AdamW (learning rate 0.001, batch size 32) on two Nvidia V100 cards. Mouse genes were initialized with embeddings of their human orthologs; unmatched genes received random initializations. This transfer significantly improved validation loss. We refer to the resulting model as Murine Geneformer.
+
+\subsection{Data and tokenization}
+
+\paragraph{Data.} Spatial‑transcriptomic data were downloaded from \cite{chen\_whole-cortex\_2024} and converted to AnnData format \citep{virshup\_scverse\_2023}. We selected the four control animals and retained only cortical cells, yielding >1.6 million cells. Metadata include three hierarchical cell‑type annotations and cellular locations in slice, CCF, and flatmap coordinates \citep{wang\_allen\_2020}.
+
+For visualizations (e.g., \FIG{fig3}) we assigned each cell type a perceptually uniform color proportional to pseudobulk‑expression similarities, implemented in the \texttt{ColorMyCell} package \citep{benjamin\_colormycells\_2025}.
+
+CCF‑derived area labels were ascended one level in the Allen Brain Atlas hierarchy to obtain 42 functionally distinct cortical areas.
+
+\paragraph{Tokenization.} Gene‑expression vectors were tokenized following Geneformer but with custom AnnData support. Each cell was normalized by total counts; gene counts were divided by a vector of median per‑gene expression from the human‑trained Geneformer corpus. Genes were rank‑sorted, and indices formed the model input. Genes with zero counts received a \texttt{<pad>} token. We prepended a \texttt{<cls>} token. Tokens map to embeddings via a learnable dictionary.
+
+\paragraph{Group construction.} We implemented a custom sampler that constructs cortical‑column groups online without data duplication. A random seed cell is selected, and the \$N\$ closest cells in the XY plane of flatmap coordinates are included, forming a column whose width adapts to local density.
+
+\subsection{Predicting area from single cells}
+
+Benchmark models either used cell type (H3), raw transcription, or both. To fine‑tune Murine Geneformer, we replaced its final layer with a linear classifier and progressively unfroze layers over successive epochs (batch size 32, learning rate 0.0005).
+
+\subsection{TissueFormer training}
+
+We trained TissueFormer on an Nvidia H100 with a batch of 4,096 cells per step, partitioned into \$N\$‑cell groups. One model (1.4 million cells) trains to convergence in <1 h. All models across group sizes were trained to convergence. Results were consistent when comparing equal numbers of training steps.
+
+Because larger areas contribute more cells, we trained an additional class‑balanced model by weighting samples with the factor \$\tfrac{M}{C,M\_i}\$, where \$M\$ is the number of samples, \$C\$ classes, and \$M\_i\$ samples in class \$i\$.
+
+\subsection{Pseudobulk and composition benchmarks}
+
+Using the same groups, we averaged gene expression (pseudobulk) or computed normalized cell‑type histograms. Logistic‑regression models used the L‑BFGS solver with nested cross‑validation for regularization (optimal: none). Random‑forest classifiers used 200 trees, max depth 15, 33% of features per tree, min samples split 5, and min samples leaf 2. Implementations were from scikit‑learn \citep{pedregosa\_scikit-learn\_2011}.
+
+\subsection{Brain‑map visualization}
+
+For \FIG{fig3}a, we trained four cross‑validated models. For dense coverage, each cell in the test brain served as a group seed once, and its predicted label was stored. We then trained a radial‑basis‑function support‑vector classifier (cuML implementation, \$\gamma=10^{-5}\$, \$C=1\$) on cell coordinates and predicted labels, coloring pixels by the SVC predictions.
+
+\section{Code availability}
+
+All code to train TissueFormer and reproduce figures is available at \url{[https://github.com/ZadorLaboratory/brain-annotation}](https://github.com/ZadorLaboratory/brain-annotation}).
+
+\bibliography{references}
+
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% APPENDICES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\appendix
+
+\end{document}
