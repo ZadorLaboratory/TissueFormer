@@ -1,6 +1,6 @@
-dataset_path: data/combat.dataset  # Path to tokenized Dataset (used by train.py)
-h5ad_path: data/combat_processed.h5ad  # Path to processed h5ad file
-splits_path: data/combat_donor_splits.json  # Path to donor-stratified CV splits
+dataset_path: null  # Set in config/local/default.yaml per machine
+h5ad_path: null  # Set in config/local/default.yaml per machine
+splits_path: null  # Set in config/local/default.yaml per machine
 cv_fold: 0  # Cross-validation fold index
 group_size: 64
 validation_split: 0.1
