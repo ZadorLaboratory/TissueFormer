@@ -22,6 +22,25 @@ Mao et al., "ScRAT: a transformer-based method for single-cell multi-omic integr
 
 Transformer encoder with mean pooling over cells. Uses BCE loss (one-vs-rest) and cell-type-aware sample mixup augmentation for small sample sizes. Cosine LR schedule with warmup.
 
+## Data format: raw expression vs. tokens
+
+TissueFormer tokenizes each cell's gene expression into a discrete token sequence (via `TranscriptomeTokenizer`) and processes these tokens with a transformer that operates on the vocabulary of gene-expression bins. The benchmark models here skip tokenization entirely and operate on **raw continuous expression values** directly, organized as "bags" of cells.
+
+The data pipeline (`data.py`) provides two dataset classes for this:
+
+- **`MILDataset`**: Each item is a bag of cells `(n_cells, n_genes)` with a single label. For COVID, each bag is one donor's cells; for brain annotation, each bag is a spatial group. Bags can be variable-length (padded at collation) or fixed-size (random crop/upsample to `cells_per_sample`).
+- **`CroppedMILDataset`**: Draws multiple fixed-size random crops per sample (used by ScRAT, which takes 20 crops/patient during training and 50 during evaluation, then majority-votes across crops).
+
+Per-method preprocessing is applied to the raw expression matrix before batching:
+
+| Method | Preprocessing | Input shape per bag |
+|--------|--------------|-------------------|
+| CellCnn | z-score (StandardScaler fit on train) | `(200, n_genes)` fixed |
+| scAGG | CP10k + log1p, top-1000 HVGs by variance | `(variable, n_genes)` padded |
+| ScRAT | raw counts (no normalization) | `(500, n_genes)` fixed crop |
+
+The collate function `mil_collate_fn` pads variable-length bags to the longest bag in the batch and returns a boolean mask `(batch, max_cells)` where `True` = padded. All three models accept this mask and use it for mask-aware pooling.
+
 ## Deviations from originals
 
 - **CellCnn**: The original trains a 15-model ensemble with random hyperparameters and keeps the top 3. We use a single model with median hyperparameters (6 filters, 5% top-k pooling) for simplicity and reproducibility.
