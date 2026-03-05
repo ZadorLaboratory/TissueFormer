@@ -395,15 +395,20 @@ def run_dl_benchmark(
             cells_per_sample=cells_per_input,
         )
     else:
-        # scagg: variable bag sizes
+        # scagg: subsample cells per donor (original uses graph NeighborLoader;
+        # our mean-pool variant doesn't need all cells)
+        cells_per = model_cfg.get("cells_per_sample", None)
         train_ds = MILDataset(
             X, make_indices(train_idx), make_labels(train_idx),
+            cells_per_sample=cells_per,
         )
         val_ds = MILDataset(
             X, make_indices(val_idx), make_labels(val_idx),
+            cells_per_sample=cells_per,
         )
         test_ds = MILDataset(
             X, make_indices(test_idx), make_labels(test_idx),
+            cells_per_sample=cells_per,
         )
 
     batch_size = model_cfg.batch_size

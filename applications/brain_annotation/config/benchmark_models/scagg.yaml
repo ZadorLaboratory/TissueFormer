@@ -11,3 +11,4 @@ dropout: 0.1
 loss_reduction: sum
 n_hvgs: null
 preprocess: cp10k_log1p
+cells_per_sample: 5000

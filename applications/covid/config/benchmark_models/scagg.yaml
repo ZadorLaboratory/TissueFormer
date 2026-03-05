@@ -10,3 +10,8 @@ dropout: 0.1
 loss_reduction: sum
 n_hvgs: 1000
 preprocess: cp10k_log1p
+# The original scAGG uses variable-length bags via graph NeighborLoader.
+# Our NoGraph variant with mean pooling doesn't need all cells -- a random
+# subsample gives an unbiased estimate of the mean. Set to null to use all
+# cells (will OOM on large donors).
+cells_per_sample: 5000

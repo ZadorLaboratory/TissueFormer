@@ -36,8 +36,10 @@ Per-method preprocessing is applied to the raw expression matrix before batching
 | Method | Preprocessing | Input shape per bag |
 |--------|--------------|-------------------|
 | CellCnn | z-score (StandardScaler fit on train) | `(200, n_genes)` fixed |
-| scAGG | CP10k + log1p, top-1000 HVGs by variance | `(variable, n_genes)` padded |
+| scAGG | CP10k + log1p, top-1000 HVGs by variance | `(5000, n_genes)` subsampled |
 | ScRAT | raw counts (no normalization) | `(500, n_genes)` fixed crop |
+
+The original scAGG uses variable-length bags via a graph NeighborLoader. Our NoGraph MLP variant with mean pooling doesn't need all cells -- a random subsample is sufficient since mean pooling gives an unbiased estimate regardless of sample size. The `cells_per_sample` config (default 5000) controls this cap. CellCnn and ScRAT also subsample, using 200 and 500 cells respectively, as specified in their papers.
 
 The collate function `mil_collate_fn` pads variable-length bags to the longest bag in the batch and returns a boolean mask `(batch, max_cells)` where `True` = padded. All three models accept this mask and use it for mask-aware pooling.
 
