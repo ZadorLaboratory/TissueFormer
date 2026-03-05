@@ -2,7 +2,6 @@
 #SBATCH --job-name=covid-bench
 #SBATCH --output=slurm_logs/covid/bench_%A_%a.out
 #SBATCH --error=slurm_logs/covid/bench_%A_%a.err
-#SBATCH --array=1-150
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=40G

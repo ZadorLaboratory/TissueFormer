@@ -2,19 +2,22 @@
 #SBATCH --job-name=covid-train
 #SBATCH --output=slurm_logs/covid/train_%A_%a.out
 #SBATCH --error=slurm_logs/covid/train_%A_%a.err
-#SBATCH --array=1-150
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=14
 #SBATCH --mem=80G
 #SBATCH --gres=gpu:h100:1
 #SBATCH --partition=gpuq
 #SBATCH --time=1-00:00:00
+#SBATCH --qos=bio_ai
 
 # 3 datasets x 5 folds x 10 group_sizes = 150 tasks
 
 module purge
 module load cuda12.3/toolkit/12.3.2
 module load cudnn8.6-cuda11.8/8.6.0.163
+
+eval "$(micromamba shell hook --shell bash)"
+micromamba activate brain_annotation2
 
 DATASETS=(combat ren stevenson)
 N_FOLDS=5
@@ -39,18 +42,28 @@ if [ "$gs" -eq 1 ]; then
     python train.py \
         dataset_name="${dataset}" \
         data.group_size=1 \
-        data.dataset_path="applications/covid/data/${dataset}.dataset" \
-        data.splits_path="applications/covid/data/${dataset}_donor_splits.json" \
+        data.dataset_path="/grid/zador/data_norepl/Ari/transcriptomics/covid/${dataset}.dataset" \
+        data.splits_path="/grid/zador/data_norepl/Ari/transcriptomics/covid/${dataset}_donor_splits.json" \
+        model.bert_path_or_name="/grid/zador/data_norepl/Ari/transcriptomics/geneformer_models/base_human_geneformer" \
         data.cv_fold="${fold}" \
         model.pretrained_type="single-cell" \
         training.remove_unused_columns=true \
-        seed="${fold}"
+        seed="${fold}" \
+        training.fp16=false \
+        +training.bf16=true \
+        training.per_device_train_batch_size=512 \
+        training.per_device_eval_batch_size=512
 else
     python train.py \
         dataset_name="${dataset}" \
         data.group_size="${gs}" \
-        data.dataset_path="applications/covid/data/${dataset}.dataset" \
-        data.splits_path="applications/covid/data/${dataset}_donor_splits.json" \
+        data.dataset_path="/grid/zador/data_norepl/Ari/transcriptomics/covid/${dataset}.dataset" \
+        data.splits_path="/grid/zador/data_norepl/Ari/transcriptomics/covid//${dataset}_donor_splits.json" \
+        model.bert_path_or_name="/grid/zador/data_norepl/Ari/transcriptomics/geneformer_models/base_human_geneformer" \
         data.cv_fold="${fold}" \
-        seed="${fold}"
+        seed="${fold}" \
+        training.fp16=true \
+        +training.bf16=false \
+        training.per_device_train_batch_size=512 \
+        training.per_device_eval_batch_size=512
 fi

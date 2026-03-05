@@ -16,35 +16,51 @@ mkdir -p "${PROJECT_DIR}/slurm_logs/covid"
 cd "${PROJECT_DIR}"
 
 MODE="${1:---all}"
-ARRAY_OVERRIDE=()
-if [ "${MODE}" = "--debug" ]; then
-    ARRAY_OVERRIDE=(--array=1-1)
-    echo "DEBUG MODE: submitting 1 task per job"
-fi
+TOTAL_TASKS=8   # 3 datasets x 5 folds x 10 group_sizes
+CHUNK_SIZE=8      # max array size allowed by SLURM manager
 
-submit_train() {
-    sbatch --parsable "${ARRAY_OVERRIDE[@]}" "$@" "${SCRIPT_DIR}/train_array.sh"
-}
-
-submit_bench() {
-    sbatch --parsable "${ARRAY_OVERRIDE[@]}" "$@" "${SCRIPT_DIR}/benchmark_array.sh"
+# Submit a script in chunks of CHUNK_SIZE, returning colon-separated job IDs.
+# Usage: submit_chunked SCRIPT [extra sbatch args...]
+submit_chunked() {
+    local script="$1"; shift
+    local n_tasks="${TOTAL_TASKS}"
+    if [ "${MODE}" = "--debug" ]; then
+        n_tasks=1
+    fi
+    local job_ids=()
+    local start=1
+    while [ "${start}" -le "${n_tasks}" ]; do
+        local end=$(( start + CHUNK_SIZE - 1 ))
+        if [ "${end}" -gt "${n_tasks}" ]; then
+            end="${n_tasks}"
+        fi
+        local jid
+        jid=$(sbatch --parsable --array="${start}-${end}" "$@" "${script}")
+        job_ids+=("${jid}")
+        echo "  Submitted array ${start}-${end} -> ${jid}" >&2
+        start=$(( end + 1 ))
+    done
+    # Return colon-separated list (for use in --dependency)
+    local IFS=":"
+    echo "${job_ids[*]}"
 }
 
 case "${MODE}" in
     --train)
-        TRAIN_ID=$(submit_train)
-        echo "Submitted training array job: ${TRAIN_ID}"
+        echo "Submitting training jobs..."
+        submit_chunked "${SCRIPT_DIR}/train_array.sh" > /dev/null
         ;;
     --bench)
-        BENCH_ID=$(submit_bench)
-        echo "Submitted benchmark array job: ${BENCH_ID}"
+        echo "Submitting benchmark jobs..."
+        submit_chunked "${SCRIPT_DIR}/benchmark_array.sh" > /dev/null
         ;;
     --debug|--all)
-        TRAIN_ID=$(submit_train)
-        echo "Submitted training array job: ${TRAIN_ID}"
+        echo "Submitting training jobs..."
+        TRAIN_IDS=$(submit_chunked "${SCRIPT_DIR}/train_array.sh")
 
-        BENCH_ID=$(submit_bench --dependency=afterok:${TRAIN_ID})
-        echo "Submitted benchmark array job: ${BENCH_ID} (depends on ${TRAIN_ID})"
+        echo "Submitting benchmark jobs (depend on training)..."
+        submit_chunked "${SCRIPT_DIR}/benchmark_array.sh" \
+            --dependency="afterok:${TRAIN_IDS}" > /dev/null
 
         echo ""
         echo "Monitor with: squeue -u \$USER"
