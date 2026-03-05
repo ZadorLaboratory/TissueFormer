@@ -2,7 +2,7 @@
 pretrained_type: "bert_only"  # Options: "none", "bert_only", "full", "single-cell", "single-cell-from-scratch"
 
 # Path of model to load or BERT component (depending on pretrained_type)
-bert_path_or_name: "/grid/zador/data_norepl/Ari/transcriptomics/geneformer_models/retraining_1707495054775589/models"
+bert_path_or_name: null  # Set in config/local/default.yaml per machine
 
 # Model architecture parameters
 num_labels: 290

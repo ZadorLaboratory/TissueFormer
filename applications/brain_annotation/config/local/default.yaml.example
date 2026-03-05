@@ -1,0 +1,6 @@
+# Machine-specific overrides — copy to default.yaml and adjust paths
+# This file is tracked in git as a template; default.yaml is gitignored
+model:
+  bert_path_or_name: "/path/to/geneformer_models"
+data:
+  dataset_path: "/path/to/train_test_barseq.dataset"

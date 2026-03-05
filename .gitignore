@@ -1,0 +1,32 @@
+# Data directories at any level
+**/data/*.h5ad
+**/data/*.dataset/
+**/data/*.json
+
+# Machine-specific Hydra config overrides (track .example templates)
+**/config/local/*
+!**/config/local/*.example
+
+# Python
+__pycache__/
+*.pyc
+
+# Outputs and logs
+outputs/
+multirun/
+slurm/
+slurm_logs/
+
+# Weights & Biases
+wandb/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Images and documents
+*.pdf
+*.png
+
+# IDE
+.vscode/
+.idea/

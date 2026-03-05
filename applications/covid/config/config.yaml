@@ -4,6 +4,7 @@ defaults:
   - data: default
   - training: default
   - wandb: default
+  - optional local: default
   - override hydra/hydra_logging: default
   - override hydra/job_logging: default
 

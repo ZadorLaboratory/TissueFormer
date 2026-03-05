@@ -13,7 +13,10 @@ applications/covid/
 │   ├── data/default.yaml           # Data/split settings
 │   ├── model/default.yaml          # TissueFormer architecture
 │   ├── training/default.yaml       # HF TrainingArguments
-│   └── wandb/default.yaml          # Weights & Biases settings
+│   ├── wandb/default.yaml          # Weights & Biases settings
+│   └── local/                      # Machine-specific overrides (gitignored)
+│       ├── default.yaml            # Your local path overrides
+│       └── default.yaml.example    # Template (tracked)
 ├── data/
 │   ├── tokenize_cells.py           # Step 1: tokenize h5ad → HF DatasetDict
 │   └── raw_data_standardization.ipynb  # Step 0: standardize raw h5ad files
@@ -36,6 +39,17 @@ Three PBMC scRNA-seq datasets, standardized via `data/raw_data_standardization.i
 | Stevenson et al. | 647k | 99 | control / mild / severe |
 
 Each h5ad is standardized to have `donor_id`, `label` (mild/severe/control), and `cell_type` columns. Donors with fewer than 1,000 cells are dropped.
+
+## Local Configuration
+
+Machine-specific paths (e.g. `bert_path_or_name`) are set in `config/local/default.yaml`, which is gitignored to avoid merge conflicts across machines. To set up:
+
+```bash
+cp config/local/default.yaml.example config/local/default.yaml
+# Edit config/local/default.yaml with your machine's paths
+```
+
+Hydra loads this file automatically via `optional local: default` in `config.yaml`. If the file is missing, defaults from the tracked configs are used.
 
 ## Quick Start
 
