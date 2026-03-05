@@ -7,8 +7,10 @@
 
 DATASETS=(combat ren stevenson)
 N_FOLDS=5
-GROUP_SIZES=(1 2 4 8 16 32 64 128 256 512)
-BENCHMARK_GROUP_SIZES=(2 4 8 16 32 64 128 256 512 all)
+# GROUP_SIZES=(1 2 4 8 16 32 64 128 256 512)
+# BENCHMARK_GROUP_SIZES=(2 4 8 16 32 64 128 256 512 all)
+GROUP_SIZES=(1 2)
+BENCHMARK_GROUP_SIZES=(2 4)
 
 for dataset in "${DATASETS[@]}"; do
     echo "=== Dataset: ${dataset} ==="
@@ -43,44 +45,44 @@ for dataset in "${DATASETS[@]}"; do
         echo "Dataset data/${dataset}.dataset already exists, skipping tokenization"
     fi
 
-    for fold in $(seq 0 $((N_FOLDS - 1))); do
-        echo "--- Fold ${fold} ---"
+    # for fold in $(seq 0 $((N_FOLDS - 1))); do
+    #     echo "--- Fold ${fold} ---"
 
-        # TissueFormer: sweep group sizes with HP tuning via Hydra multirun
-        for gs in "${GROUP_SIZES[@]}"; do
-            echo "TissueFormer gs=${gs}..."
-            if [ "$gs" -eq 1 ]; then
-                python train.py \
-                    dataset_name="${dataset}" \
-                    data.group_size=1 \
-                    data.dataset_path="data/${dataset}.dataset" \
-                    data.splits_path="data/${dataset}_donor_splits.json" \
-                    data.cv_fold="${fold}" \
-                    model.pretrained_type="single-cell" \
-                    training.remove_unused_columns=true \
-                    seed="${fold}"
-            else
-                python train.py \
-                    dataset_name="${dataset}" \
-                    data.group_size="${gs}" \
-                    data.dataset_path="data/${dataset}.dataset" \
-                    data.splits_path="data/${dataset}_donor_splits.json" \
-                    data.cv_fold="${fold}" \
-                    seed="${fold}"
-            fi
-        done
+    #     # TissueFormer: sweep group sizes with HP tuning via Hydra multirun
+    #     for gs in "${GROUP_SIZES[@]}"; do
+    #         echo "TissueFormer gs=${gs}..."
+    #         if [ "$gs" -eq 1 ]; then
+    #             python train.py \
+    #                 dataset_name="${dataset}" \
+    #                 data.group_size=1 \
+    #                 data.dataset_path="data/${dataset}.dataset" \
+    #                 data.splits_path="data/${dataset}_donor_splits.json" \
+    #                 data.cv_fold="${fold}" \
+    #                 model.pretrained_type="single-cell" \
+    #                 training.remove_unused_columns=true \
+    #                 seed="${fold}"
+    #         else
+    #             python train.py \
+    #                 dataset_name="${dataset}" \
+    #                 data.group_size="${gs}" \
+    #                 data.dataset_path="data/${dataset}.dataset" \
+    #                 data.splits_path="data/${dataset}_donor_splits.json" \
+    #                 data.cv_fold="${fold}" \
+    #                 seed="${fold}"
+    #         fi
+    #     done
 
-        # Benchmarks: group-level (matched group sizes) + whole-donor
-        for gs in "${BENCHMARK_GROUP_SIZES[@]}"; do
-            echo "Benchmarks gs=${gs}..."
-            python benchmarks.py \
-                dataset_name="${dataset}" \
-                data.group_size="${gs}" \
-                data.h5ad_path="data/${dataset}_processed.h5ad" \
-                data.splits_path="data/${dataset}_donor_splits.json" \
-                data.cv_fold="${fold}"
-        done
-    done
+    #     # Benchmarks: group-level (matched group sizes) + whole-donor
+    #     for gs in "${BENCHMARK_GROUP_SIZES[@]}"; do
+    #         echo "Benchmarks gs=${gs}..."
+    #         python benchmarks.py \
+    #             dataset_name="${dataset}" \
+    #             data.group_size="${gs}" \
+    #             data.h5ad_path="data/${dataset}_processed.h5ad" \
+    #             data.splits_path="data/${dataset}_donor_splits.json" \
+    #             data.cv_fold="${fold}"
+    #     done
+    # done
 done
 
 echo "=== All experiments complete ==="

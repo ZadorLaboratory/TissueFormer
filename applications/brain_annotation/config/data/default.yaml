@@ -1,4 +1,4 @@
-dataset_path: /grid/zador/data_norepl/Ari/transcriptomics/barseq/Chen2023/train_test_barseq.dataset  # Path to tokenized DatasetDict
+dataset_path: null  # Set in config/local/default.yaml per machine
 group_size: 32
 validation_split: 0.1
 coordinate_key: "CCF_streamlines"
