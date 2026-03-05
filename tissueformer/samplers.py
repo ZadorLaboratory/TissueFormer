@@ -1648,8 +1648,8 @@ class GroupedDonorTrainer(Trainer):
             donor_key=self.donor_key,
             seed=random_seed,
             iterate_all_donors=False,
-            num_replicas=self.args.world_size,
-            rank=self.args.process_index,
+            num_replicas=1,   # Let accelerator.prepare() handle DDP distribution
+            rank=0,
         )
 
     def _get_eval_sampler(self, eval_dataset) -> Optional[Sampler]:
@@ -1666,8 +1666,8 @@ class GroupedDonorTrainer(Trainer):
             donor_key=self.donor_key,
             seed=42,
             iterate_all_donors=True,
-            num_replicas=self.args.world_size,
-            rank=self.args.process_index,
+            num_replicas=1,   # Let accelerator.prepare() handle DDP distribution
+            rank=0,
         )
 
     def get_test_dataloader(self, test_dataset: Dataset) -> DataLoader:
