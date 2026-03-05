@@ -1,0 +1,13 @@
+# BARseq has ~100 genes, so n_hvgs selection is skipped (use all genes)
+hidden_dim: 128
+n_heads: 8
+n_heads2: 4
+pooling: mean
+lr: 0.001
+weight_decay: 0.0005
+batch_size: 8
+n_epochs: 2
+dropout: 0.1
+loss_reduction: sum
+n_hvgs: null
+preprocess: cp10k_log1p

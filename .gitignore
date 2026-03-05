@@ -27,6 +27,9 @@ wandb/
 *.pdf
 *.png
 
+# Reference repos
+references/
+
 # IDE
 .vscode/
 .idea/

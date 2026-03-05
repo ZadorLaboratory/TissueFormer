@@ -1,0 +1,11 @@
+n_filters: 6
+maxpool_percentage: 5.0
+lr: 0.01
+batch_size: 200
+n_epochs: 20
+early_stopping_patience: 5
+dropout: 0.5
+l1_reg: 1e-4
+l2_reg: 1e-4
+cells_per_input: 200
+preprocess: zscore

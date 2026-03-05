@@ -1,0 +1,12 @@
+hidden_dim: 128
+n_heads: 8
+n_heads2: 4
+pooling: mean
+lr: 0.001
+weight_decay: 0.0005
+batch_size: 8
+n_epochs: 2
+dropout: 0.1
+loss_reduction: sum
+n_hvgs: 1000
+preprocess: cp10k_log1p

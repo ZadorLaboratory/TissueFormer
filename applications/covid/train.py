@@ -408,6 +408,12 @@ def main(cfg: DictConfig) -> None:
             all_metrics = {**outputs.metrics, **group_metrics, **mv_metrics, **ml_metrics}
             trainer.log_metrics(data_key, all_metrics)
 
+            # Log to wandb
+            wandb_metrics = {f"{data_key}/{k}": v for k, v in all_metrics.items()}
+            wandb_metrics[f"{data_key}/n_donors"] = len(mv["donor_ids"])
+            wandb_metrics[f"{data_key}/n_groups"] = len(predictions)
+            wandb.log(wandb_metrics)
+
             output_dict = {
                 "group_predictions": predictions,
                 "group_logits": logits,
