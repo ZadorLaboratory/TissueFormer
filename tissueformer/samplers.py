@@ -1648,8 +1648,8 @@ class GroupedDonorTrainer(Trainer):
             donor_key=self.donor_key,
             seed=random_seed,
             iterate_all_donors=False,
-            num_replicas=self.args.world_size,
-            rank=self.args.process_index,
+            num_replicas=1,   # Let accelerator.prepare() handle DDP distribution
+            rank=0,
         )
 
     def _get_eval_sampler(self, eval_dataset) -> Optional[Sampler]:
@@ -1666,8 +1666,8 @@ class GroupedDonorTrainer(Trainer):
             donor_key=self.donor_key,
             seed=42,
             iterate_all_donors=True,
-            num_replicas=self.args.world_size,
-            rank=self.args.process_index,
+            num_replicas=1,   # Let accelerator.prepare() handle DDP distribution
+            rank=0,
         )
 
     def get_test_dataloader(self, test_dataset: Dataset) -> DataLoader:
@@ -1689,8 +1689,8 @@ class GroupedDonorTrainer(Trainer):
             donor_key=self.donor_key,
             seed=42,
             iterate_all_donors=True,
-            num_replicas=self.args.world_size,
-            rank=self.args.process_index,
+            num_replicas=1,   # Let accelerator.prepare() handle DDP distribution
+            rank=0,
         )
         self._test_sampler = sampler
 
@@ -1753,17 +1753,17 @@ class GroupedDonorTrainer(Trainer):
 
         ordered_indices = index_tracking_dataloader.get_collected_indices()
 
-        # Subsample: one prediction per group (every group_size-th entry)
+        # Predictions are already per-group (model returns one prediction per group).
+        # Truncate to actual group count to remove any DDP padding duplicates.
+        n_groups = sum(self._test_sampler.get_eval_donor_group_counts().values())
         if isinstance(output.predictions, tuple):
-            preds = tuple([p[::self.donor_group_size] for p in output.predictions])
+            preds = tuple([p[:n_groups] for p in output.predictions])
         else:
-            preds = output.predictions[::self.donor_group_size]
-
+            preds = output.predictions[:n_groups]
         if isinstance(output.label_ids, tuple):
-            label_ids = tuple([l[::self.donor_group_size] for l in output.label_ids])
+            label_ids = tuple([l[:n_groups] for l in output.label_ids])
         else:
-            label_ids = output.label_ids[::self.donor_group_size]
-        ordered_indices = ordered_indices[::self.donor_group_size]
+            label_ids = output.label_ids[:n_groups]
 
         # Build group-to-donor mapping from sampler
         group_donor_ids = []

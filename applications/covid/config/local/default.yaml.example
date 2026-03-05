@@ -1,4 +1,9 @@
+# @package _global_
 # Machine-specific overrides — copy to default.yaml and adjust paths
 # This file is tracked in git as a template; default.yaml is gitignored
 model:
   bert_path_or_name: "/path/to/geneformer_models/base_human_geneformer"
+data:
+  dataset_path: "data/combat.dataset"
+  h5ad_path: "data/combat_processed.h5ad"
+  splits_path: "data/combat_donor_splits.json"
