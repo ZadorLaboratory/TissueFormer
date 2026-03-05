@@ -2,7 +2,7 @@
 pretrained_type: "bert_only"  # Options: "none", "bert_only", "single-cell"
 
 # Geneformer pretrained BERT weights
-bert_path_or_name: "/home/benjami/mnt/zador_data_norepl/ari/transcriptomics/geneformer_models/geneformer-12L-30M/models"
+bert_path_or_name: "/home/benjami/mnt/zador_data_norepl/ari/transcriptomics/geneformer_models/base_human_geneformer"
 
 # Model architecture parameters
 num_labels: 3  # control, mild, severe

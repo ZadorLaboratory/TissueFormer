@@ -180,3 +180,101 @@ class TestDonorGroupSampler:
         indices_e1 = list(sampler)
         # Very unlikely to be the same
         assert indices_e0 != indices_e1
+
+
+class TestDonorGroupSamplerDistributed:
+    """Tests for multi-rank (DDP) behavior using explicit num_replicas/rank."""
+
+    def test_ranks_get_equal_lengths(self, dataset):
+        """All ranks must yield the same number of indices."""
+        num_replicas = 3
+        lengths = []
+        for rank in range(num_replicas):
+            sampler = DonorGroupSampler(
+                dataset, batch_size=64, group_size=8, seed=0,
+                num_replicas=num_replicas, rank=rank,
+            )
+            lengths.append(len(list(sampler)))
+        assert len(set(lengths)) == 1, f"Unequal lengths across ranks: {lengths}"
+
+    def test_ranks_get_equal_lengths_eval(self, dataset):
+        """All ranks must yield the same number of indices in eval mode."""
+        num_replicas = 3
+        lengths = []
+        for rank in range(num_replicas):
+            sampler = DonorGroupSampler(
+                dataset, batch_size=64, group_size=8, seed=42,
+                iterate_all_donors=True,
+                num_replicas=num_replicas, rank=rank,
+            )
+            lengths.append(len(list(sampler)))
+        assert len(set(lengths)) == 1, f"Unequal lengths across ranks: {lengths}"
+
+    def test_train_no_overlap(self, dataset):
+        """In train mode, ranks should get disjoint groups."""
+        num_replicas = 2
+        group_size = 8
+        rank_groups = []
+        for rank in range(num_replicas):
+            sampler = DonorGroupSampler(
+                dataset, batch_size=64, group_size=group_size, seed=0,
+                num_replicas=num_replicas, rank=rank,
+            )
+            indices = list(sampler)
+            # Collect groups as tuples for comparison
+            groups = []
+            for start in range(0, len(indices), group_size):
+                groups.append(tuple(indices[start:start + group_size]))
+            rank_groups.append(set(groups))
+
+        # Groups across ranks should be disjoint
+        overlap = rank_groups[0] & rank_groups[1]
+        assert len(overlap) == 0, f"Ranks share {len(overlap)} groups"
+
+    def test_eval_donor_purity_distributed(self, dataset):
+        """Groups should remain donor-pure across all ranks."""
+        num_replicas = 2
+        group_size = 8
+        donor_ids = np.array(dataset["donor_id"])
+
+        for rank in range(num_replicas):
+            sampler = DonorGroupSampler(
+                dataset, batch_size=64, group_size=group_size, seed=42,
+                iterate_all_donors=True,
+                num_replicas=num_replicas, rank=rank,
+            )
+            indices = list(sampler)
+            for start in range(0, len(indices), group_size):
+                group = indices[start:start + group_size]
+                group_donors = set(donor_ids[group])
+                assert len(group_donors) == 1, \
+                    f"Rank {rank}: group has cells from multiple donors: {group_donors}"
+
+    def test_eval_full_coverage(self, dataset):
+        """Union of all ranks' indices should cover all cells (minus padding)."""
+        num_replicas = 2
+        group_size = 8
+        all_indices = set()
+        for rank in range(num_replicas):
+            sampler = DonorGroupSampler(
+                dataset, batch_size=64, group_size=group_size, seed=42,
+                iterate_all_donors=True,
+                num_replicas=num_replicas, rank=rank,
+            )
+            all_indices.update(list(sampler))
+
+        # All original dataset indices should be covered
+        expected = set(range(len(dataset)))
+        assert expected.issubset(all_indices), \
+            f"Missing {len(expected - all_indices)} indices from dataset"
+
+    def test_single_replica_matches_original(self, dataset):
+        """num_replicas=1 should behave identically to no distributed args."""
+        sampler_default = DonorGroupSampler(
+            dataset, batch_size=64, group_size=8, seed=42,
+            num_replicas=1, rank=0,
+        )
+        sampler_implicit = DonorGroupSampler(
+            dataset, batch_size=64, group_size=8, seed=42,
+        )
+        assert list(sampler_default) == list(sampler_implicit)

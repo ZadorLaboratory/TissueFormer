@@ -1415,13 +1415,18 @@ class IndexTrackingDataLoader:
 class DonorGroupSampler(Sampler):
     """
     Sampler that groups cells by donor_id for per-subject classification tasks.
+    Supports distributed training (DDP) via num_replicas/rank parameters.
 
     In training mode (iterate_all_donors=False): randomly picks donors and samples
-    group_size cells from each donor. Repeats for num_samples // group_size groups.
+    group_size cells from each donor. All ranks generate the same sequence of groups
+    using a shared RNG seed, then each rank takes its strided slice (every num_replicas-th
+    group starting at rank). This ensures groups from the same donor stay contiguous
+    within each rank's batch.
 
     In eval mode (iterate_all_donors=True): creates ceil(n_cells / group_size)
-    groups per donor, using ALL cells. The last group is padded with replacement
-    sampling if needed. Tracks group-to-donor mapping via get_eval_donor_group_counts().
+    groups per donor, using ALL cells. Groups are distributed round-robin across ranks.
+    The last rank is padded so all ranks yield the same number of samples.
+    Tracks group-to-donor mapping via get_eval_donor_group_counts().
 
     For group_size=1: falls back to standard random sampling (no grouping).
     """
@@ -1435,6 +1440,8 @@ class DonorGroupSampler(Sampler):
         seed: int = 0,
         iterate_all_donors: bool = False,
         num_samples: Optional[int] = None,
+        num_replicas: Optional[int] = None,
+        rank: Optional[int] = None,
     ):
         self.dataset = dataset
         self.batch_size = batch_size
@@ -1444,6 +1451,14 @@ class DonorGroupSampler(Sampler):
         self.iterate_all_donors = iterate_all_donors
         self.epoch = 0
         self._eval_donor_group_counts: Dict[str, int] = {}
+
+        # Distributed settings
+        if num_replicas is None:
+            num_replicas = dist.get_world_size() if dist.is_initialized() else 1
+        if rank is None:
+            rank = dist.get_rank() if dist.is_initialized() else 0
+        self.num_replicas = num_replicas
+        self.rank = rank
 
         # Build donor -> cell indices mapping
         donor_ids = np.array(dataset[donor_key])
@@ -1464,16 +1479,24 @@ class DonorGroupSampler(Sampler):
                     f"Will sample with replacement."
                 )
 
-        # Calculate number of samples
+        # Calculate total number of samples (across all ranks)
         if num_samples is not None:
-            self.num_samples = num_samples
+            total_samples = num_samples
         elif iterate_all_donors:
-            self.num_samples = sum(
+            total_samples = sum(
                 math.ceil(len(idx) / group_size) * group_size
                 for idx in self.donor_to_indices.values()
             )
         else:
-            self.num_samples = len(dataset)
+            total_samples = len(dataset)
+
+        # Pad total to be divisible by (group_size * num_replicas) so each rank
+        # gets the same number of complete groups
+        groups_per_rank = math.ceil(
+            total_samples / (group_size * num_replicas)
+        )
+        self.num_samples = groups_per_rank * group_size
+        self.total_samples = groups_per_rank * group_size * num_replicas
 
     def __len__(self) -> int:
         return self.num_samples
@@ -1519,28 +1542,51 @@ class DonorGroupSampler(Sampler):
     def __iter__(self) -> Iterator[int]:
         rng = np.random.RandomState(self.seed + self.epoch)
 
-        # group_size=1: standard random sampling
+        # group_size=1: standard random sampling with distributed slicing
         if self.group_size == 1:
             indices = rng.permutation(len(self.dataset))
-            yield from indices[:self.num_samples].tolist()
+            # Pad to total_samples then slice for this rank
+            if len(indices) < self.total_samples:
+                extra = self.total_samples - len(indices)
+                indices = np.concatenate([indices, indices[:extra]])
+            indices = indices[:self.total_samples]
+            # Each rank takes every num_replicas-th sample
+            rank_indices = indices[self.rank::self.num_replicas]
+            yield from rank_indices.tolist()
             return
 
         if self.iterate_all_donors:
-            # Eval mode: all groups per donor, deterministic order
+            # Eval mode: generate all groups for all donors, then distribute
             donor_order = sorted(self.donors)
             self._eval_donor_group_counts = {}
+            all_groups = []  # list of flat arrays, each of length group_size
             for donor in donor_order:
-                all_indices = self._sample_all_groups_from_donor(donor, rng)
-                n_groups = len(all_indices) // self.group_size
+                donor_indices = self._sample_all_groups_from_donor(donor, rng)
+                n_groups = len(donor_indices) // self.group_size
                 self._eval_donor_group_counts[donor] = n_groups
-                yield from all_indices.tolist()
+                for i in range(n_groups):
+                    start = i * self.group_size
+                    all_groups.append(donor_indices[start:start + self.group_size])
+
+            # Pad total groups so divisible by num_replicas
+            total_groups = len(all_groups)
+            groups_per_rank = math.ceil(total_groups / self.num_replicas)
+            while len(all_groups) < groups_per_rank * self.num_replicas:
+                all_groups.append(all_groups[-1])  # repeat last group as padding
+
+            # This rank takes every num_replicas-th group
+            for i in range(self.rank, len(all_groups), self.num_replicas):
+                yield from all_groups[i].tolist()
         else:
-            # Train mode: random donor selection
-            num_groups = self.num_samples // self.group_size
-            for _ in range(num_groups):
+            # Train mode: all ranks generate same sequence, each takes its slice
+            total_groups = self.total_samples // self.group_size
+            group_idx = 0
+            for _ in range(total_groups):
                 donor = self.donors[rng.randint(len(self.donors))]
                 cell_indices = self._sample_cells_from_donor(donor, rng)
-                yield from cell_indices.tolist()
+                if group_idx % self.num_replicas == self.rank:
+                    yield from cell_indices.tolist()
+                group_idx += 1
 
 
 class GroupedDonorTrainer(Trainer):
@@ -1602,6 +1648,8 @@ class GroupedDonorTrainer(Trainer):
             donor_key=self.donor_key,
             seed=random_seed,
             iterate_all_donors=False,
+            num_replicas=self.args.world_size,
+            rank=self.args.process_index,
         )
 
     def _get_eval_sampler(self, eval_dataset) -> Optional[Sampler]:
@@ -1618,6 +1666,8 @@ class GroupedDonorTrainer(Trainer):
             donor_key=self.donor_key,
             seed=42,
             iterate_all_donors=True,
+            num_replicas=self.args.world_size,
+            rank=self.args.process_index,
         )
 
     def get_test_dataloader(self, test_dataset: Dataset) -> DataLoader:
@@ -1639,6 +1689,8 @@ class GroupedDonorTrainer(Trainer):
             donor_key=self.donor_key,
             seed=42,
             iterate_all_donors=True,
+            num_replicas=self.args.world_size,
+            rank=self.args.process_index,
         )
         self._test_sampler = sampler
 

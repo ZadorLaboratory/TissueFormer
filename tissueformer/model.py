@@ -374,10 +374,10 @@ class TissueFormer(BertPreTrainedModel):
             loss_fct = nn.CrossEntropyLoss(
                 weight=self.class_weights.to(logits.device) if self.class_weights is not None else None
             )
-            loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
+            loss = loss_fct(logits.float().view(-1, self.config.num_labels), labels.view(-1))
 
             if self.single_cell_loss_after_set:
-                single_cell_loss = loss_fct(single_cell_logits.view(-1, self.config.num_labels), single_cell_labels.view(-1))
+                single_cell_loss = loss_fct(single_cell_logits.float().view(-1, self.config.num_labels), single_cell_labels.view(-1))
                 loss = self.single_cell_vs_group_weight * single_cell_loss + (1 - self.single_cell_vs_group_weight) * loss
         
         if not return_dict:
