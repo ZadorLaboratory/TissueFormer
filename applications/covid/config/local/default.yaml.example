@@ -1,3 +1,4 @@
+# @package _global_
 # Machine-specific overrides — copy to default.yaml and adjust paths
 # This file is tracked in git as a template; default.yaml is gitignored
 model:
