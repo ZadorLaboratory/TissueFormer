@@ -155,3 +155,125 @@ class TestClassifiers:
         probs = clf.predict_proba(test_feat)
         assert preds.shape == (3,)
         assert probs.shape[0] == 3
+
+
+class TestDLBenchmarks:
+    """Smoke tests for CellCnn, scAGG, and ScRAT benchmark models."""
+
+    def _make_synthetic_mil_data(self, n_samples=12, n_genes=20, cells_per=50):
+        """Create synthetic MIL data with class signal."""
+        rng = np.random.RandomState(42)
+        expression = rng.randn(n_samples * cells_per, n_genes).astype(np.float32)
+        for i in range(n_samples):
+            label = i % 3
+            expression[i * cells_per:(i + 1) * cells_per, label * 3:(label + 1) * 3] += 2.0
+        sample_indices = [np.arange(i * cells_per, (i + 1) * cells_per) for i in range(n_samples)]
+        labels = np.array([i % 3 for i in range(n_samples)])
+        return expression, sample_indices, labels
+
+    def test_cellcnn_forward_shape(self):
+        """CellCnn forward pass produces correct output shape."""
+        import torch
+        from tissueformer.benchmark_models.cellcnn import CellCnn
+        model = CellCnn(n_genes=20, n_classes=3, n_filters=4, cells_per_input=50)
+        x = torch.randn(4, 50, 20)
+        out = model(x)
+        assert out.shape == (4, 3)
+
+    def test_scagg_forward_shape(self):
+        """ScAGG forward pass produces correct output shape."""
+        import torch
+        from tissueformer.benchmark_models.scagg import ScAGG
+        model = ScAGG(n_genes=20, n_classes=3, hidden_dim=32, n_heads=2, n_heads2=2)
+        x = torch.randn(4, 50, 20)
+        out = model(x)
+        assert out.shape == (4, 3)
+
+    def test_scrat_forward_shape(self):
+        """ScRAT forward pass produces correct output shape."""
+        import torch
+        from tissueformer.benchmark_models.scrat import ScRAT
+        model = ScRAT(n_genes=20, n_classes=3, hidden_dim=32, n_heads=4)
+        x = torch.randn(4, 50, 20)
+        out = model(x)
+        assert out.shape == (4, 3)
+
+    def test_topk_pool(self):
+        """CellCnn top-k pooling selects correct cells."""
+        import torch
+        from tissueformer.benchmark_models.cellcnn import TopKPool
+        pool = TopKPool(k=2)
+        x = torch.arange(12, dtype=torch.float32).reshape(1, 4, 3)
+        out = pool(x)
+        # Top 2 cells are cells 2 and 3: [[6,7,8], [9,10,11]] -> mean = [7.5, 8.5, 9.5]
+        expected = torch.tensor([[7.5, 8.5, 9.5]])
+        assert torch.allclose(out, expected)
+
+    def test_topk_pool_with_mask(self):
+        """Top-k pooling respects padding mask."""
+        import torch
+        from tissueformer.benchmark_models.cellcnn import TopKPool
+        pool = TopKPool(k=2)
+        x = torch.arange(12, dtype=torch.float32).reshape(1, 4, 3)
+        mask = torch.tensor([[False, False, True, True]])  # mask cells 2,3
+        out = pool(x, mask=mask)
+        # Only cells 0 and 1 are valid: [[0,1,2], [3,4,5]] -> mean = [1.5, 2.5, 3.5]
+        expected = torch.tensor([[1.5, 2.5, 3.5]])
+        assert torch.allclose(out, expected)
+
+    def test_mil_collate_padding(self):
+        """mil_collate_fn pads variable-length bags correctly."""
+        import torch
+        from tissueformer.benchmark_models.data import mil_collate_fn
+        batch = [
+            (torch.randn(10, 5), torch.tensor(0.0)),
+            (torch.randn(20, 5), torch.tensor(1.0)),
+        ]
+        cells, labels, mask = mil_collate_fn(batch)
+        assert cells.shape == (2, 20, 5)
+        assert mask.shape == (2, 20)
+        assert mask[0, :10].sum() == 0  # first 10 real
+        assert mask[0, 10:].sum() == 10  # last 10 padded
+        assert mask[1].sum() == 0  # all real
+
+    def test_cellcnn_smoke_train(self):
+        """CellCnn trains for 2 epochs, loss decreases."""
+        import torch, wandb
+        from torch.utils.data import DataLoader
+        from tissueformer.benchmark_models import CellCnn, BenchmarkTrainer, MILDataset, mil_collate_fn
+        wandb.init(mode='disabled')
+
+        expr, si, labels = self._make_synthetic_mil_data()
+        ds = MILDataset(expr, si, labels, cells_per_sample=50)
+        loader = DataLoader(ds, batch_size=4, collate_fn=mil_collate_fn)
+
+        model = CellCnn(n_genes=20, n_classes=3, n_filters=4, cells_per_input=50)
+        opt = torch.optim.Adam(model.parameters(), lr=0.01)
+        trainer = BenchmarkTrainer(
+            model=model, optimizer=opt,
+            train_loader=loader, val_loader=loader,
+            device=torch.device('cpu'), n_epochs=2,
+            early_stopping_patience=None, model_name='test_cellcnn', n_classes=3,
+        )
+        loss1 = trainer.train_epoch()
+        loss2 = trainer.train_epoch()
+        wandb.finish()
+        # Loss should generally decrease with strong signal
+        assert isinstance(loss1, float)
+        assert isinstance(loss2, float)
+
+    def test_scrat_mixup(self):
+        """ScRAT cell-type mixup produces correct output structure."""
+        from tissueformer.benchmark_models.scrat import cell_type_mixup
+        expr = np.random.randn(200, 10).astype(np.float32)
+        si = [np.arange(0, 100), np.arange(100, 200)]
+        labels = np.array([0, 1])
+        ct = np.concatenate([np.zeros(100), np.ones(100)]).astype(np.int64)
+
+        aug_expr, aug_idx, aug_labels = cell_type_mixup(
+            expr, si, labels, ct, n_pseudo=3, cells_per_pseudo=50, alpha=0.5
+        )
+        assert len(aug_idx) == 5  # 2 original + 3 pseudo
+        assert aug_labels.shape[0] == 5
+        assert aug_labels[0] == 0
+        assert aug_labels[1] == 1

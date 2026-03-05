@@ -38,6 +38,11 @@ run_bulk_expression_lr: true
 run_h3type_rf: true
 run_h3type_lr: true
 
+# DL benchmark flags
+run_cellcnn: false
+run_scagg: false
+run_scrat: false
+
 hydra:
   run:
     dir: ${output_dir}

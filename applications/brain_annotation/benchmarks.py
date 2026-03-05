@@ -642,6 +642,178 @@ def run_classifier(
             cfg.output_dir
         )
 
+def run_dl_benchmark_brain(
+    datasets: DatasetDict,
+    cfg: DictConfig,
+    model_name: str,
+) -> None:
+    """Run a DL benchmark on brain annotation data.
+
+    Brain annotation differs from COVID: data is spatial (not donor-level),
+    each cell has a label, and we group spatially adjacent cells into bags.
+    """
+    from torch.utils.data import DataLoader
+    from tissueformer.benchmark_models.cellcnn import CellCnn
+    from tissueformer.benchmark_models.scagg import ScAGG
+    from tissueformer.benchmark_models.scrat import ScRAT
+    from tissueformer.benchmark_models.data import MILDataset, CroppedMILDataset, mil_collate_fn
+    from tissueformer.benchmark_models.trainer import BenchmarkTrainer
+    import transformers
+
+    print(f"\n--- DL benchmark: {model_name} ---")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed(cfg.seed)
+    np.random.seed(cfg.seed)
+
+    # Load model config
+    model_cfg = OmegaConf.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "config", "benchmark_models", f"{model_name}.yaml",
+        )
+    )
+    if hasattr(cfg, "benchmark_models") and hasattr(cfg.benchmark_models, model_name):
+        model_cfg = OmegaConf.merge(model_cfg, cfg.benchmark_models[model_name])
+
+    # Use the spatial group dataloaders to get grouped bags
+    dataloaders = get_dataloaders(datasets, cfg)
+
+    # Collect all data through dataloaders into bags
+    def collect_bags(loader, split_name):
+        all_cells = []
+        all_labels = []
+        for batch in loader:
+            raw = batch['raw_counts'].cpu().numpy()  # (batch, group_size, n_genes)
+            labs = batch['labels'].cpu().numpy()      # (batch,)
+            for i in range(raw.shape[0]):
+                all_cells.append(raw[i])
+                all_labels.append(labs[i])
+        return all_cells, np.array(all_labels)
+
+    train_cells, train_labels = collect_bags(dataloaders["train"], "train")
+    val_cells, val_labels = collect_bags(dataloaders["validation"], "validation")
+    test_cells, test_labels = collect_bags(dataloaders["test"], "test")
+
+    # Each item in train_cells is already a (group_size, n_genes) array = one bag
+    # Stack into flat expression matrix with sample indices
+    def bags_to_mil_format(bags_list, labels_arr):
+        expression_parts = []
+        sample_indices = []
+        cursor = 0
+        for bag in bags_list:
+            n = bag.shape[0]
+            expression_parts.append(bag)
+            sample_indices.append(np.arange(cursor, cursor + n))
+            cursor += n
+        expression = np.vstack(expression_parts).astype(np.float32)
+        return expression, sample_indices, labels_arr
+
+    train_X, train_si, train_y = bags_to_mil_format(train_cells, train_labels)
+    val_X, val_si, val_y = bags_to_mil_format(val_cells, val_labels)
+    test_X, test_si, test_y = bags_to_mil_format(test_cells, test_labels)
+
+    # Apply preprocessing
+    from tissueformer.benchmark_models.data import preprocess_zscore, preprocess_cp10k_log1p
+    preprocess = model_cfg.get("preprocess", "raw")
+    if preprocess == "zscore":
+        scaler = StandardScaler()
+        scaler.fit(train_X)
+        train_X, _ = preprocess_zscore(train_X, scaler)
+        val_X, _ = preprocess_zscore(val_X, scaler)
+        test_X, _ = preprocess_zscore(test_X, scaler)
+    elif preprocess == "cp10k_log1p":
+        train_X = preprocess_cp10k_log1p(train_X)
+        val_X = preprocess_cp10k_log1p(val_X)
+        test_X = preprocess_cp10k_log1p(test_X)
+
+    n_genes = train_X.shape[1]
+    n_classes = len(set(train_y))
+
+    # Build datasets (bags already formed, just wrap)
+    train_ds = MILDataset(train_X, train_si, train_y)
+    val_ds = MILDataset(val_X, val_si, val_y)
+    test_ds = MILDataset(test_X, test_si, test_y)
+
+    batch_size = model_cfg.batch_size
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=mil_collate_fn)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=mil_collate_fn)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=mil_collate_fn)
+
+    # Build model
+    if model_name == "cellcnn":
+        cells_per_input = model_cfg.get("cells_per_input", 200)
+        model = CellCnn(
+            n_genes=n_genes, n_classes=n_classes,
+            n_filters=model_cfg.n_filters,
+            maxpool_percentage=model_cfg.maxpool_percentage,
+            dropout=model_cfg.dropout,
+            cells_per_input=cells_per_input,
+        )
+        optimizer = torch.optim.Adam(model.parameters(), lr=model_cfg.lr, weight_decay=model_cfg.l2_reg)
+        l1_fn = lambda: model.l1_loss(model_cfg.l1_reg)
+        trainer = BenchmarkTrainer(
+            model=model, optimizer=optimizer,
+            train_loader=train_loader, val_loader=val_loader,
+            device=device, n_epochs=model_cfg.n_epochs,
+            early_stopping_patience=model_cfg.early_stopping_patience,
+            l1_loss_fn=l1_fn, model_name=model_name, n_classes=n_classes,
+        )
+    elif model_name == "scagg":
+        model = ScAGG(
+            n_genes=n_genes, n_classes=n_classes,
+            hidden_dim=model_cfg.hidden_dim,
+            n_heads=model_cfg.n_heads, n_heads2=model_cfg.n_heads2,
+            dropout=model_cfg.dropout,
+        )
+        optimizer = torch.optim.Adam(model.parameters(), lr=model_cfg.lr, weight_decay=model_cfg.weight_decay)
+        loss_fn = torch.nn.CrossEntropyLoss(reduction=model_cfg.loss_reduction)
+        trainer = BenchmarkTrainer(
+            model=model, optimizer=optimizer,
+            train_loader=train_loader, val_loader=val_loader,
+            device=device, n_epochs=model_cfg.n_epochs,
+            loss_fn=loss_fn, early_stopping_patience=None,
+            model_name=model_name, n_classes=n_classes,
+        )
+    elif model_name == "scrat":
+        model = ScRAT(
+            n_genes=n_genes, n_classes=n_classes,
+            hidden_dim=model_cfg.hidden_dim,
+            n_heads=model_cfg.n_heads, n_layers=model_cfg.n_layers,
+            dropout=model_cfg.dropout,
+        )
+        optimizer = torch.optim.Adam(model.parameters(), lr=model_cfg.lr, weight_decay=model_cfg.weight_decay)
+        scheduler = transformers.get_cosine_schedule_with_warmup(
+            optimizer, num_warmup_steps=model_cfg.lr_warmup_epochs,
+            num_training_steps=model_cfg.n_epochs,
+        )
+        trainer = BenchmarkTrainer(
+            model=model, optimizer=optimizer,
+            train_loader=train_loader, val_loader=val_loader,
+            device=device, n_epochs=model_cfg.n_epochs,
+            early_stopping_patience=model_cfg.early_stopping_patience,
+            early_stopping_start_epoch=model_cfg.early_stopping_start_epoch,
+            scheduler=scheduler, model_name=model_name,
+            use_sigmoid=True, n_classes=n_classes,
+        )
+    else:
+        raise ValueError(f"Unknown DL benchmark: {model_name}")
+
+    # Train
+    trainer.train()
+
+    # Evaluate on test
+    test_loss, test_preds, test_labels_out, test_probs = trainer.eval_epoch(test_loader)
+
+    evaluate_method(
+        test_preds, test_labels_out,
+        np.arange(len(test_preds)),
+        f"{model_name}_test",
+        cfg.data.label_names if hasattr(cfg.data, 'label_names') else {},
+        cfg.output_dir,
+    )
+
+
 @hydra.main(version_base=None, config_path="config", config_name="benchmarks")
 def main(cfg: DictConfig) -> None:
     print("Running benchmarks...")
@@ -690,7 +862,19 @@ def main(cfg: DictConfig) -> None:
     
     if cfg.run_h3type_lr:
         run_classifier(datasets, adata, cfg, "logistic_regression", "h3type")
-    
+
+    # Deep learning benchmarks
+    dl_models = {
+        "cellcnn": cfg.get("run_cellcnn", False),
+        "scagg": cfg.get("run_scagg", False),
+        "scrat": cfg.get("run_scrat", False),
+    }
+
+    for model_name, should_run in dl_models.items():
+        if not should_run:
+            continue
+        run_dl_benchmark_brain(datasets, cfg, model_name)
+
     # Close wandb run
     wandb.finish()
 
