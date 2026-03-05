@@ -8,6 +8,8 @@ and standard HuggingFace Trainer with BertForSequenceClassification for group_si
 import os
 import sys
 import json
+import glob
+import signal
 from typing import Dict, Optional
 
 import hydra
@@ -339,9 +341,38 @@ def main(cfg: DictConfig) -> None:
             index_key="uuid",
         )
 
+    # Resume from checkpoint if a previous run was preempted
+    breadcrumb_dir = os.path.join("outputs", cfg.dataset_name)
+    breadcrumb_path = os.path.join(
+        breadcrumb_dir,
+        f".resume_fold{cfg.data.cv_fold}_gs{cfg.data.group_size}.json",
+    )
+    resume_from = None
+    if os.path.exists(breadcrumb_path):
+        with open(breadcrumb_path) as f:
+            prev_output_dir = json.load(f)["output_dir"]
+        checkpoints = sorted(glob.glob(os.path.join(prev_output_dir, "checkpoint-*")))
+        if checkpoints:
+            resume_from = checkpoints[-1]
+            print(f"Resuming from checkpoint: {resume_from}")
+
+    # Write breadcrumb so a requeued job can find our checkpoints
+    os.makedirs(breadcrumb_dir, exist_ok=True)
+    with open(breadcrumb_path, "w") as f:
+        json.dump({"output_dir": cfg.training.output_dir}, f)
+
+    # Handle SIGUSR1 from SLURM preemption: save checkpoint and exit
+    def handle_preempt(signum, frame):
+        print("SIGUSR1 received — saving checkpoint before preemption")
+        trainer.save_model(os.path.join(cfg.training.output_dir, "checkpoint-preempt"))
+        trainer.save_state()
+        sys.exit(0)
+
+    signal.signal(signal.SIGUSR1, handle_preempt)
+
     # Train
     if cfg.training.num_train_epochs > 0:
-        train_result = trainer.train()
+        train_result = trainer.train(resume_from_checkpoint=resume_from)
         trainer.save_model()
         trainer.save_state()
 
@@ -450,6 +481,10 @@ def main(cfg: DictConfig) -> None:
             )
             with open(json_path, "w") as f:
                 json.dump(json_result, f, indent=2)
+
+    # Clean up breadcrumb on successful completion
+    if os.path.exists(breadcrumb_path):
+        os.remove(breadcrumb_path)
 
     wandb.finish()
 

@@ -9,7 +9,8 @@ lr_scheduler_type: "linear"
 weight_decay: 0.001
 logging_steps: 10
 eval_steps: 100
-save_steps: 5000
+save_steps: 500
+save_total_limit: 3
 gradient_accumulation_steps: 1
 fp16: true
 # H100 config: set fp16: false, bf16: true, per_device_train_batch_size: 512,
