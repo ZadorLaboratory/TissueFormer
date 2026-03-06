@@ -10,7 +10,6 @@ Pulls results from wandb (project: covid-severity) and produces:
 import os
 import argparse
 
-import numpy as np
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
