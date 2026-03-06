@@ -37,21 +37,25 @@ DATASET_LABELS = {"combat": "COMBAT", "ren": "Ren et al.", "stevenson": "Stevens
 GROUP_SIZES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
 
 # Method display config: maps method key -> plotting style
+# Classical methods use {clf}_{feat} keys; DL methods use model name directly
 METHODS = {
     "tissueformer": {"color": "#2196F3", "marker": "o", "label": "TissueFormer"},
     "random_forest_pseudobulk": {"color": "#4CAF50", "marker": "s", "label": "RF (pseudobulk)"},
     "logistic_regression_pseudobulk": {"color": "#FF9800", "marker": "^", "label": "LR (pseudobulk)"},
     "random_forest_cell_type_histogram": {"color": "#9C27B0", "marker": "D", "label": "RF (cell type)"},
     "logistic_regression_cell_type_histogram": {"color": "#F44336", "marker": "v", "label": "LR (cell type)"},
+    "cellcnn": {"color": "#00BCD4", "marker": "P", "label": "CellCnn"},
+    "scagg": {"color": "#795548", "marker": "X", "label": "scAGG"},
+    "scrat": {"color": "#607D8B", "marker": "h", "label": "ScRAT"},
 }
 
-# Metric rows: (display_label, tissueformer_key, benchmark_key_suffix)
-# For TissueFormer, metrics are logged as test/{key}
-# For benchmarks, metrics are logged as {clf}_{feat}_gs{N}_{suffix}
+# Metric rows: (display_label, tissueformer_key, benchmark_suffix)
+# Benchmark metrics are logged as {method}_gs{N}_{suffix}
 METRIC_ROWS = [
-    ("Group Accuracy", "test/group_accuracy", "accuracy"),
-    ("Donor Accuracy\n(mean logits)", "test/donor_meanlogits_accuracy", None),
-    ("Donor AUROC\n(mean logits)", "test/donor_meanlogits_auroc", None),
+    ("Group Accuracy", "test/group_accuracy", "group_accuracy"),
+    ("Donor Accuracy\n(majority vote)", "test/donor_majority_accuracy", "donor_majority_accuracy"),
+    ("Donor Accuracy\n(mean logits)", "test/donor_meanlogits_accuracy", "donor_meanprobs_accuracy"),
+    ("Donor AUROC\n(mean logits)", "test/donor_meanlogits_auroc", "donor_meanprobs_auroc"),
 ]
 
 
@@ -86,10 +90,21 @@ def classify_runs(df: pd.DataFrame):
     return df[~is_benchmark].copy(), df[is_benchmark].copy()
 
 
+def _build_benchmark_col_name(method_key, gs, suffix):
+    """Build the wandb metric column name for a benchmark method.
+
+    Classical methods: {clf}_{feat}_gs{N}_{suffix}
+      e.g. random_forest_pseudobulk_gs64_group_accuracy
+    DL methods: {model}_gs{N}_{suffix}
+      e.g. cellcnn_gs64_group_accuracy
+    """
+    return f"{method_key}_gs{gs}_{suffix}"
+
+
 def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
     """
     Main figure: group accuracy, donor accuracy, and donor AUROC vs group_size.
-    One column per dataset, three rows.
+    One column per dataset, one row per metric.
     """
     n_rows = len(METRIC_ROWS)
     fig, axes = plt.subplots(n_rows, len(DATASETS),
@@ -120,22 +135,14 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
         for method_key, style in METHODS.items():
             if method_key == "tissueformer":
                 continue
-            # method_key e.g. "random_forest_pseudobulk" -> clf="random_forest", feat="pseudobulk"
-            tokens = method_key.split("_")
-            if len(tokens) < 3:
-                continue
-            clf_type = "_".join(tokens[:2])
-            feat_type = "_".join(tokens[2:])
 
             for row, (row_label, _, bench_suffix) in enumerate(METRIC_ROWS):
                 if bench_suffix is None:
-                    continue  # Benchmarks don't have donor-level aggregation
+                    continue
 
-                # Find all columns matching this benchmark pattern
-                # Metric keys: {clf}_{feat}_gs{N}_{suffix}
                 x_vals, means, stds = [], [], []
                 for gs in GROUP_SIZES:
-                    col_name = f"{clf_type}_{feat_type}_gs{gs}_{bench_suffix}"
+                    col_name = _build_benchmark_col_name(method_key, gs, bench_suffix)
                     if col_name not in bench_ds.columns:
                         continue
                     values = bench_ds[col_name].dropna()
@@ -172,7 +179,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
                     handles.append(hi)
                     labels.append(li)
     if handles:
-        fig.legend(handles, labels, loc="upper center", ncol=min(len(handles), 3),
+        fig.legend(handles, labels, loc="upper center", ncol=min(len(handles), 4),
                    bbox_to_anchor=(0.5, 1.08))
 
     plt.tight_layout()

@@ -10,8 +10,13 @@ Deep learning methods (end-to-end trainable on raw cells):
   - ScRAT    (Mao et al., Bioinformatics 2024)
 
 Uses the same donor-stratified CV splits as TissueFormer.
+
+For any group_size < "all", reports both group-level metrics (how well does the
+model classify from gs cells?) and donor-level metrics (aggregated across
+ceil(n_cells/gs) non-overlapping groups per donor).
 """
 
+import math
 import os
 import json
 import warnings
@@ -51,6 +56,35 @@ def setup_wandb(cfg: DictConfig):
 
 # ---------- Feature aggregation ----------
 
+def _get_label_map(adata):
+    """Determine label map from data."""
+    unique_labels = set(adata.obs["label"].unique())
+    if "control" in unique_labels:
+        return {"control": 0, "mild": 1, "severe": 2}
+    return {"mild": 0, "severe": 1}
+
+
+def _compute_feature(donor_adata, feature_type, all_cell_types=None):
+    """Compute a single feature vector from a subset of cells."""
+    if feature_type == "pseudobulk":
+        X = donor_adata.X
+        if scipy.sparse.issparse(X):
+            X = X.toarray()
+        return np.mean(X, axis=0).flatten()
+    elif feature_type == "cell_type_histogram":
+        cell_types = donor_adata.obs["cell_type"].values
+        type_to_idx = {t: i for i, t in enumerate(all_cell_types)}
+        hist = np.zeros(len(all_cell_types))
+        for ct in cell_types:
+            hist[type_to_idx[ct]] += 1
+        total = hist.sum()
+        if total > 0:
+            hist /= total
+        return hist
+    else:
+        raise ValueError(f"Unknown feature_type: {feature_type}")
+
+
 def aggregate_donor_features(
     h5ad_path: str,
     donor_ids: list,
@@ -59,20 +93,10 @@ def aggregate_donor_features(
     seed: int = 42,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Aggregate cell-level data to donor-level features.
+    Aggregate cell-level data to donor-level features (one group per donor).
 
-    Args:
-        h5ad_path: Path to processed h5ad file.
-        donor_ids: List of donor IDs to include.
-        feature_type: "pseudobulk" (mean expression) or "cell_type_histogram".
-        group_size: If set, sample this many cells per donor per group.
-                    If None, use all cells (whole-donor mode).
-        seed: Random seed for subsampling.
-
-    Returns:
-        features: (n_donors, n_features) array
-        labels: (n_donors,) integer labels
-        donors: (n_donors,) donor ID array
+    Used for training: each donor contributes one feature vector from a single
+    group of group_size cells (or all cells if group_size is None).
     """
     adata = ad.read_h5ad(h5ad_path)
 
@@ -82,12 +106,12 @@ def aggregate_donor_features(
 
     rng = np.random.RandomState(seed)
     unique_donors = sorted(set(donor_ids) & set(adata.obs["donor_id"].unique()))
+    all_cell_types = sorted(adata.obs["cell_type"].unique()) if feature_type == "cell_type_histogram" else None
 
     features_list = []
     labels_list = []
     donors_list = []
 
-    # Pre-compute label map
     label_map = _get_label_map(adata)
 
     for donor in unique_donors:
@@ -97,33 +121,13 @@ def aggregate_donor_features(
         n_cells = len(donor_adata)
 
         if group_size is not None and group_size < n_cells:
-            # Sample group_size cells
             idx = rng.choice(n_cells, size=group_size, replace=False)
             donor_adata = donor_adata[idx]
         elif group_size is not None and group_size > n_cells:
-            # Sample with replacement
             idx = rng.choice(n_cells, size=group_size, replace=True)
             donor_adata = donor_adata[idx]
 
-        if feature_type == "pseudobulk":
-            X = donor_adata.X
-            if scipy.sparse.issparse(X):
-                X = X.toarray()
-            feat = np.mean(X, axis=0).flatten()
-        elif feature_type == "cell_type_histogram":
-            cell_types = donor_adata.obs["cell_type"].values
-            unique_types = sorted(adata.obs["cell_type"].unique())
-            type_to_idx = {t: i for i, t in enumerate(unique_types)}
-            hist = np.zeros(len(unique_types))
-            for ct in cell_types:
-                hist[type_to_idx[ct]] += 1
-            total = hist.sum()
-            if total > 0:
-                hist /= total
-            feat = hist
-        else:
-            raise ValueError(f"Unknown feature_type: {feature_type}")
-
+        feat = _compute_feature(donor_adata, feature_type, all_cell_types)
         features_list.append(feat)
         labels_list.append(donor_label)
         donors_list.append(donor)
@@ -131,12 +135,112 @@ def aggregate_donor_features(
     return np.array(features_list), np.array(labels_list), np.array(donors_list)
 
 
-def _get_label_map(adata):
-    """Determine label map from data."""
-    unique_labels = set(adata.obs["label"].unique())
-    if "control" in unique_labels:
-        return {"control": 0, "mild": 1, "severe": 2}
-    return {"mild": 0, "severe": 1}
+def aggregate_donor_features_multi(
+    h5ad_path: str,
+    donor_ids: list,
+    feature_type: str = "pseudobulk",
+    group_size: int = 64,
+    seed: int = 42,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Create ceil(n_cells / group_size) non-overlapping groups per donor.
+
+    Shuffles cells, chunks into non-overlapping groups of group_size.
+    Last chunk is padded with replacement sampling if < group_size cells.
+    Mirrors DonorGroupSampler._sample_all_groups_from_donor in samplers.py.
+
+    Returns:
+        features: (total_groups, n_features) array
+        labels: (total_groups,) integer labels
+        donors: (total_groups,) donor ID array
+    """
+    adata = ad.read_h5ad(h5ad_path)
+
+    mask = adata.obs["donor_id"].isin(donor_ids)
+    adata = adata[mask]
+
+    rng = np.random.RandomState(seed)
+    unique_donors = sorted(set(donor_ids) & set(adata.obs["donor_id"].unique()))
+    all_cell_types = sorted(adata.obs["cell_type"].unique()) if feature_type == "cell_type_histogram" else None
+
+    features_list = []
+    labels_list = []
+    donors_list = []
+
+    label_map = _get_label_map(adata)
+
+    for donor in unique_donors:
+        donor_mask = adata.obs["donor_id"] == donor
+        donor_adata = adata[donor_mask]
+        donor_label = label_map[donor_adata.obs["label"].iloc[0]]
+        n_cells = len(donor_adata)
+
+        # Shuffle and chunk into non-overlapping groups
+        shuffled_idx = rng.permutation(n_cells)
+        n_groups = math.ceil(n_cells / group_size)
+
+        for g in range(n_groups):
+            start = g * group_size
+            end = start + group_size
+            chunk_idx = shuffled_idx[start:end]
+
+            if len(chunk_idx) < group_size:
+                # Pad with replacement sampling from this donor
+                pad_size = group_size - len(chunk_idx)
+                pad_idx = rng.choice(n_cells, size=pad_size, replace=True)
+                chunk_idx = np.concatenate([chunk_idx, pad_idx])
+
+            group_adata = donor_adata[chunk_idx]
+            feat = _compute_feature(group_adata, feature_type, all_cell_types)
+            features_list.append(feat)
+            labels_list.append(donor_label)
+            donors_list.append(donor)
+
+    return np.array(features_list), np.array(labels_list), np.array(donors_list)
+
+
+# ---------- Prediction aggregation ----------
+
+def aggregate_to_donor(predictions, labels, probs, donor_ids, n_classes):
+    """Aggregate group predictions to donor level.
+
+    Returns dict with 'majority_vote' and 'mean_probs' sub-dicts,
+    each containing 'predictions', 'labels', 'probs', 'donor_ids'.
+    """
+    unique_donors = np.unique(donor_ids)
+    mv_preds = []
+    mp_probs = []
+    donor_labels = []
+
+    for donor in unique_donors:
+        mask = donor_ids == donor
+        # Majority vote
+        mv_preds.append(
+            np.bincount(predictions[mask], minlength=n_classes).argmax()
+        )
+        # Mean probabilities
+        mp_probs.append(probs[mask].mean(axis=0))
+        donor_labels.append(labels[mask][0])
+
+    mv_preds = np.array(mv_preds)
+    mp_probs = np.array(mp_probs)
+    mp_preds = np.argmax(mp_probs, axis=-1)
+    donor_labels = np.array(donor_labels)
+
+    return {
+        "majority_vote": {
+            "predictions": mv_preds,
+            "labels": donor_labels,
+            "probs": mp_probs,  # use mean probs for AUROC even with majority vote preds
+            "donor_ids": unique_donors,
+        },
+        "mean_probs": {
+            "predictions": mp_preds,
+            "labels": donor_labels,
+            "probs": mp_probs,
+            "donor_ids": unique_donors,
+        },
+    }
 
 
 # ---------- Classifier pipelines ----------
@@ -216,19 +320,31 @@ def run_benchmark(
     seed: int = 42,
 ) -> Dict:
     """
-    Run a single benchmark: train classifier on train donors, evaluate on test donors.
+    Run a single classical benchmark.
+
+    Training uses one group of group_size cells per donor.
+    Testing creates ceil(n_cells/gs) non-overlapping groups per donor,
+    reports group-level metrics and donor-aggregated metrics.
     """
     gs_str = "all" if group_size is None else str(group_size)
-    prefix = f"{classifier_type}_{feature_type}_gs{gs_str}"
+    method = f"{classifier_type}_{feature_type}"
+    prefix = f"{method}_gs{gs_str}"
     print(f"\n--- {prefix} ---")
 
-    # Aggregate features
+    # Aggregate features for training (1 group per donor)
     train_features, train_labels, train_donor_arr = aggregate_donor_features(
         h5ad_path, train_donors, feature_type, group_size, seed=seed
     )
-    test_features, test_labels, test_donor_arr = aggregate_donor_features(
-        h5ad_path, test_donors, feature_type, group_size, seed=seed + 1
-    )
+
+    # For testing: multi-group if group_size is set, single-group if "all"
+    if group_size is not None:
+        test_features, test_labels, test_donor_arr = aggregate_donor_features_multi(
+            h5ad_path, test_donors, feature_type, group_size, seed=seed + 1
+        )
+    else:
+        test_features, test_labels, test_donor_arr = aggregate_donor_features(
+            h5ad_path, test_donors, feature_type, group_size, seed=seed + 1
+        )
 
     # Verify donor isolation
     assert len(set(train_donor_arr) & set(test_donor_arr)) == 0, \
@@ -252,23 +368,50 @@ def run_benchmark(
     if hasattr(clf, "best_params_"):
         print(f"  Best params: {clf.best_params_}")
 
-    # Evaluate on test
+    # Predict on test groups
     test_predictions = clf.predict(test_features)
     test_probs = clf.predict_proba(test_features)
 
-    metrics = evaluate_predictions(
-        test_labels, test_predictions, test_probs, label_names, prefix
+    # Determine n_classes from probs
+    n_classes = test_probs.shape[1]
+
+    # Group-level metrics
+    group_metrics = evaluate_predictions(
+        test_labels, test_predictions, test_probs, label_names,
+        f"{prefix}_group",
     )
+
+    # Donor-level metrics (aggregate groups per donor)
+    if group_size is not None:
+        donor_agg = aggregate_to_donor(
+            test_predictions, test_labels, test_probs, test_donor_arr, n_classes
+        )
+        mv = donor_agg["majority_vote"]
+        donor_mv_metrics = evaluate_predictions(
+            mv["labels"], mv["predictions"], mv["probs"], label_names,
+            f"{prefix}_donor_majority",
+        )
+        mp = donor_agg["mean_probs"]
+        donor_mp_metrics = evaluate_predictions(
+            mp["labels"], mp["predictions"], mp["probs"], label_names,
+            f"{prefix}_donor_meanprobs",
+        )
+    else:
+        # group_size=None: group IS the donor (all cells), no aggregation needed
+        donor_mv_metrics = {}
+        donor_mp_metrics = {}
+
+    all_metrics = {**group_metrics, **donor_mv_metrics, **donor_mp_metrics}
 
     # Save results
     os.makedirs(output_dir, exist_ok=True)
     result = {
-        "metrics": {k: float(v) for k, v in metrics.items()},
-        "predictions": test_predictions.tolist(),
-        "labels": test_labels.tolist(),
-        "donor_ids": test_donor_arr.tolist(),
-        "label_names": label_names,
+        "method": method,
         "group_size": gs_str,
+        "group_metrics": {k: float(v) for k, v in group_metrics.items()},
+        "donor_majority_metrics": {k: float(v) for k, v in donor_mv_metrics.items()},
+        "donor_meanprobs_metrics": {k: float(v) for k, v in donor_mp_metrics.items()},
+        "label_names": label_names,
         "classifier_type": classifier_type,
         "feature_type": feature_type,
     }
@@ -279,10 +422,13 @@ def run_benchmark(
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)
 
-    print(f"  Metrics: {metrics}")
-    wandb.log(metrics)
+    print(f"  Group metrics: {group_metrics}")
+    if donor_mv_metrics:
+        print(f"  Donor majority metrics: {donor_mv_metrics}")
+        print(f"  Donor meanprobs metrics: {donor_mp_metrics}")
+    wandb.log(all_metrics)
 
-    return metrics
+    return all_metrics
 
 
 # ---------- Deep learning benchmarks ----------
@@ -296,12 +442,17 @@ def run_dl_benchmark(
     label_map: Dict[str, int],
     label_names: Dict,
     output_dir: str,
+    group_size: Optional[int] = None,
     seed: int = 42,
     donor_key: str = "donor_id",
     label_key: str = "label",
     cell_type_key: str = "cell_type",
 ) -> Dict:
-    """Run a deep learning benchmark (CellCnn, scAGG, or ScRAT)."""
+    """Run a deep learning benchmark (CellCnn, scAGG, or ScRAT).
+
+    When group_size is set, overrides the model's default cells-per-bag setting
+    and reports both group-level and donor-aggregated metrics.
+    """
     from torch.utils.data import DataLoader
     from tissueformer.benchmark_models.data import (
         MILDataset, CroppedMILDataset, mil_collate_fn,
@@ -314,13 +465,23 @@ def run_dl_benchmark(
     from tissueformer.benchmark_models.trainer import BenchmarkTrainer
     import transformers
 
-    print(f"\n--- DL benchmark: {model_name} ---")
+    gs_str = "all" if group_size is None else str(group_size)
+    print(f"\n--- DL benchmark: {model_name} (gs={gs_str}) ---")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(seed)
     np.random.seed(seed)
 
     n_classes = len(label_map)
+
+    # Override model cell counts with group_size if specified
+    if group_size is not None:
+        if model_name == "cellcnn":
+            model_cfg = OmegaConf.merge(model_cfg, {"cells_per_input": group_size})
+        elif model_name == "scagg":
+            model_cfg = OmegaConf.merge(model_cfg, {"cells_per_sample": group_size})
+        elif model_name == "scrat":
+            model_cfg = OmegaConf.merge(model_cfg, {"cells_per_crop": group_size})
 
     # Load data organized by donor
     X, sample_indices, labels, cell_types, donor_order = load_covid_mil_data(
@@ -364,22 +525,37 @@ def run_dl_benchmark(
     def make_labels(idx_list):
         return labels[idx_list]
 
+    # Compute crops per donor for test sets: ceil(n_cells / group_size)
+    def compute_crops_per_donor(idx_list):
+        """Compute the number of non-overlapping groups per donor."""
+        crops = []
+        for i in idx_list:
+            n_cells = len(sample_indices[i])
+            crops.append(math.ceil(n_cells / group_size) if group_size else 1)
+        return crops
+
+    # For test evaluation with group_size set, use CroppedMILDataset for all models
+    # to get multiple crops per donor for aggregation
+    use_cropped_test = group_size is not None
+
     if model_name == "scrat":
+        cells_per_crop = model_cfg.cells_per_crop
         train_ds = CroppedMILDataset(
             X, make_indices(train_idx), make_labels(train_idx),
-            cells_per_crop=model_cfg.cells_per_crop,
+            cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_train,
         )
         val_ds = CroppedMILDataset(
             X, make_indices(val_idx), make_labels(val_idx),
-            cells_per_crop=model_cfg.cells_per_crop,
+            cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_test,
         )
         test_ds = CroppedMILDataset(
             X, make_indices(test_idx), make_labels(test_idx),
-            cells_per_crop=model_cfg.cells_per_crop,
+            cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_test,
         )
+        test_crops_per = model_cfg.crops_per_patient_test
     elif model_name == "cellcnn":
         cells_per_input = model_cfg.get("cells_per_input", 200)
         train_ds = MILDataset(
@@ -390,13 +566,23 @@ def run_dl_benchmark(
             X, make_indices(val_idx), make_labels(val_idx),
             cells_per_sample=cells_per_input,
         )
-        test_ds = MILDataset(
-            X, make_indices(test_idx), make_labels(test_idx),
-            cells_per_sample=cells_per_input,
-        )
+        if use_cropped_test:
+            # Use max crops across test donors for uniform CroppedMILDataset
+            test_crops_list = compute_crops_per_donor(test_idx)
+            test_crops_per = max(test_crops_list)
+            test_ds = CroppedMILDataset(
+                X, make_indices(test_idx), make_labels(test_idx),
+                cells_per_crop=cells_per_input,
+                crops_per_sample=test_crops_per,
+            )
+        else:
+            test_ds = MILDataset(
+                X, make_indices(test_idx), make_labels(test_idx),
+                cells_per_sample=cells_per_input,
+            )
+            test_crops_per = 1
     else:
-        # scagg: subsample cells per donor (original uses graph NeighborLoader;
-        # our mean-pool variant doesn't need all cells)
+        # scagg
         cells_per = model_cfg.get("cells_per_sample", None)
         train_ds = MILDataset(
             X, make_indices(train_idx), make_labels(train_idx),
@@ -406,10 +592,20 @@ def run_dl_benchmark(
             X, make_indices(val_idx), make_labels(val_idx),
             cells_per_sample=cells_per,
         )
-        test_ds = MILDataset(
-            X, make_indices(test_idx), make_labels(test_idx),
-            cells_per_sample=cells_per,
-        )
+        if use_cropped_test:
+            test_crops_list = compute_crops_per_donor(test_idx)
+            test_crops_per = max(test_crops_list)
+            test_ds = CroppedMILDataset(
+                X, make_indices(test_idx), make_labels(test_idx),
+                cells_per_crop=cells_per if cells_per else 5000,
+                crops_per_sample=test_crops_per,
+            )
+        else:
+            test_ds = MILDataset(
+                X, make_indices(test_idx), make_labels(test_idx),
+                cells_per_sample=cells_per,
+            )
+            test_crops_per = 1
 
     batch_size = model_cfg.batch_size
     train_loader = DataLoader(
@@ -509,47 +705,63 @@ def run_dl_benchmark(
     # Evaluate on test set
     test_loss, test_preds, test_labels, test_probs = trainer.eval_epoch(test_loader)
 
-    # For ScRAT with multiple crops per patient, do majority voting
-    if model_name == "scrat":
-        crops_per = model_cfg.crops_per_patient_test
-        n_patients = len(test_idx)
-        voted_preds = []
-        voted_labels = []
-        voted_probs = []
-        for p in range(n_patients):
-            start = p * crops_per
-            end = start + crops_per
-            patient_preds = test_preds[start:end]
-            patient_probs = test_probs[start:end]
-            # Majority vote
-            voted_preds.append(np.bincount(patient_preds, minlength=n_classes).argmax())
-            voted_labels.append(test_labels[start])
-            voted_probs.append(patient_probs.mean(axis=0))
-        test_preds = np.array(voted_preds)
-        test_labels = np.array(voted_labels)
-        test_probs = np.array(voted_probs)
+    prefix = f"{model_name}_gs{gs_str}"
 
-    prefix = f"{model_name}_test"
-    metrics = evaluate_predictions(
-        test_labels, test_preds, test_probs, label_names, prefix
+    # Group-level metrics (per-crop accuracy)
+    group_metrics = evaluate_predictions(
+        test_labels, test_preds, test_probs, label_names, f"{prefix}_group"
     )
+
+    # Donor-level metrics (aggregate crops per donor)
+    n_patients = len(test_idx)
+    if test_crops_per > 1:
+        # Build donor_ids array matching the per-crop predictions
+        test_donor_ids = np.array([
+            donor_order[test_idx[p]]
+            for p in range(n_patients)
+            for _ in range(test_crops_per)
+        ])
+        donor_agg = aggregate_to_donor(
+            test_preds, test_labels, test_probs, test_donor_ids, n_classes
+        )
+        mv = donor_agg["majority_vote"]
+        donor_mv_metrics = evaluate_predictions(
+            mv["labels"], mv["predictions"], mv["probs"], label_names,
+            f"{prefix}_donor_majority",
+        )
+        mp = donor_agg["mean_probs"]
+        donor_mp_metrics = evaluate_predictions(
+            mp["labels"], mp["predictions"], mp["probs"], label_names,
+            f"{prefix}_donor_meanprobs",
+        )
+    else:
+        # 1 prediction per donor, group == donor
+        donor_mv_metrics = {}
+        donor_mp_metrics = {}
+
+    all_metrics = {**group_metrics, **donor_mv_metrics, **donor_mp_metrics}
 
     # Save results
     os.makedirs(output_dir, exist_ok=True)
     result = {
-        "metrics": {k: float(v) for k, v in metrics.items()},
-        "predictions": test_preds.tolist(),
-        "labels": test_labels.tolist(),
+        "method": model_name,
+        "group_size": gs_str,
+        "group_metrics": {k: float(v) for k, v in group_metrics.items()},
+        "donor_majority_metrics": {k: float(v) for k, v in donor_mv_metrics.items()},
+        "donor_meanprobs_metrics": {k: float(v) for k, v in donor_mp_metrics.items()},
         "model_name": model_name,
     }
-    result_path = os.path.join(output_dir, f"{model_name}_results.json")
+    result_path = os.path.join(output_dir, f"{prefix}_results.json")
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)
 
-    print(f"  Metrics: {metrics}")
-    wandb.log(metrics)
+    print(f"  Group metrics: {group_metrics}")
+    if donor_mv_metrics:
+        print(f"  Donor majority metrics: {donor_mv_metrics}")
+        print(f"  Donor meanprobs metrics: {donor_mp_metrics}")
+    wandb.log(all_metrics)
 
-    return metrics
+    return all_metrics
 
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
@@ -622,6 +834,7 @@ def main(cfg: DictConfig) -> None:
             label_map=label_map,
             label_names=label_names,
             output_dir=cfg.training.output_dir,
+            group_size=group_size,
             seed=cfg.seed,
             donor_key=cfg.data.get("donor_key", "donor_id"),
             label_key=cfg.data.get("label_key", "label"),
