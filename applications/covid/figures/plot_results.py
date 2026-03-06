@@ -45,6 +45,9 @@ METHODS = {
     "logistic_regression_pseudobulk": {"color": "#FF9800", "marker": "^", "label": "LR (pseudobulk)"},
     "random_forest_cell_type_histogram": {"color": "#9C27B0", "marker": "D", "label": "RF (cell type)"},
     "logistic_regression_cell_type_histogram": {"color": "#F44336", "marker": "v", "label": "LR (cell type)"},
+    "cellcnn_dl": {"color": "#00BCD4", "marker": "P", "label": "CellCnn"},
+    "scagg_dl": {"color": "#795548", "marker": "X", "label": "scAGG"},
+    "scrat_dl": {"color": "#607D8B", "marker": "h", "label": "ScRAT"},
 }
 
 # Metric rows to plot: (row_label, metric_key_extractor)
@@ -197,8 +200,8 @@ def plot_accuracy_auroc_vs_groupsize(results, output_dir):
     # Single legend at top
     handles, labels = axes[0, 0].get_legend_handles_labels()
     if handles:
-        fig.legend(handles, labels, loc="upper center", ncol=min(len(handles), 3),
-                   bbox_to_anchor=(0.5, 1.08))
+        fig.legend(handles, labels, loc="upper center", ncol=min(len(handles), 4),
+                   bbox_to_anchor=(0.5, 1.12))
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)

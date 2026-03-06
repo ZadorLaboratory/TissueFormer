@@ -296,6 +296,7 @@ def run_dl_benchmark(
     label_map: Dict[str, int],
     label_names: Dict,
     output_dir: str,
+    group_size: Optional[int] = None,
     seed: int = 42,
     donor_key: str = "donor_id",
     label_key: str = "label",
@@ -529,7 +530,8 @@ def run_dl_benchmark(
         test_labels = np.array(voted_labels)
         test_probs = np.array(voted_probs)
 
-    prefix = f"{model_name}_test"
+    gs_str = "all" if group_size is None else str(group_size)
+    prefix = f"{model_name}_test_gs{gs_str}"
     metrics = evaluate_predictions(
         test_labels, test_preds, test_probs, label_names, prefix
     )
@@ -541,8 +543,11 @@ def run_dl_benchmark(
         "predictions": test_preds.tolist(),
         "labels": test_labels.tolist(),
         "model_name": model_name,
+        "group_size": gs_str,
+        "classifier_type": model_name,
+        "feature_type": "dl",
     }
-    result_path = os.path.join(output_dir, f"{model_name}_results.json")
+    result_path = os.path.join(output_dir, f"{model_name}_gs{gs_str}_results.json")
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)
 
@@ -576,7 +581,8 @@ def main(cfg: DictConfig) -> None:
         group_size = None
 
     all_metrics = {}
-    for clf_type in ["random_forest", "logistic_regression"]:
+    run_classical = cfg.get("run_classical", True)
+    for clf_type in ["random_forest", "logistic_regression"] if run_classical else []:
         for feat_type in ["pseudobulk", "cell_type_histogram"]:
             metrics = run_benchmark(
                 h5ad_path=h5ad_path,
@@ -613,6 +619,14 @@ def main(cfg: DictConfig) -> None:
         if hasattr(cfg, "benchmark_models") and hasattr(cfg.benchmark_models, model_name):
             model_cfg = OmegaConf.merge(model_cfg, cfg.benchmark_models[model_name])
 
+        # Override cells_per with group_size for fair comparison across methods
+        cells_per_key = {
+            "cellcnn": "cells_per_input",
+            "scagg": "cells_per_sample",
+            "scrat": "cells_per_crop",
+        }[model_name]
+        OmegaConf.update(model_cfg, cells_per_key, group_size, force_add=True)
+
         metrics = run_dl_benchmark(
             h5ad_path=h5ad_path,
             train_donors=train_donors,
@@ -622,6 +636,7 @@ def main(cfg: DictConfig) -> None:
             label_map=label_map,
             label_names=label_names,
             output_dir=cfg.training.output_dir,
+            group_size=group_size,
             seed=cfg.seed,
             donor_key=cfg.data.get("donor_key", "donor_id"),
             label_key=cfg.data.get("label_key", "label"),
