@@ -1,25 +1,22 @@
 """
 Manuscript-quality figures for COVID severity classification results.
 
-Produces:
+Pulls results from wandb (project: covid-severity) and produces:
   1. Main figure: Group accuracy, donor accuracy, and donor AUROC vs group_size
      for TissueFormer + benchmarks
-  2. Supplementary: Confusion matrices
+  2. Supplementary: Confusion matrices (TODO — requires logged artifacts)
 """
 
 import os
-import json
-import glob
 import argparse
-from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, roc_curve, auc
 from matplotlib.ticker import ScalarFormatter
+import wandb
 
 
 # Style matching brain_annotation paper figures
@@ -39,6 +36,8 @@ plt.rcParams.update({
 DATASETS = ["combat", "ren", "stevenson"]
 DATASET_LABELS = {"combat": "COMBAT", "ren": "Ren et al.", "stevenson": "Stevenson et al."}
 GROUP_SIZES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+
+# Method display config: maps method key -> plotting style
 METHODS = {
     "tissueformer": {"color": "#2196F3", "marker": "o", "label": "TissueFormer"},
     "random_forest_pseudobulk": {"color": "#4CAF50", "marker": "s", "label": "RF (pseudobulk)"},
@@ -47,90 +46,48 @@ METHODS = {
     "logistic_regression_cell_type_histogram": {"color": "#F44336", "marker": "v", "label": "LR (cell type)"},
 }
 
-# Metric rows to plot: (row_label, metric_key_extractor)
-# Each extractor takes a metrics dict and returns the value or None.
+# Metric rows: (display_label, tissueformer_key, benchmark_key_suffix)
+# For TissueFormer, metrics are logged as test/{key}
+# For benchmarks, metrics are logged as {clf}_{feat}_gs{N}_{suffix}
 METRIC_ROWS = [
-    ("Group Accuracy", "group_accuracy"),
-    ("Donor Accuracy\n(mean logits)", "donor_meanlogits_accuracy"),
-    ("Donor AUROC\n(mean logits)", "donor_meanlogits_auroc"),
+    ("Group Accuracy", "test/group_accuracy", "accuracy"),
+    ("Donor Accuracy\n(mean logits)", "test/donor_meanlogits_accuracy", None),
+    ("Donor AUROC\n(mean logits)", "test/donor_meanlogits_auroc", None),
 ]
 
 
-def load_results(results_dir: str) -> dict:
-    """
-    Load all result JSON files from the results directory.
+def fetch_runs(entity: str, project: str, filters: dict = None) -> pd.DataFrame:
+    """Fetch runs from wandb and return a DataFrame with config + summary."""
+    api = wandb.Api()
+    runs = api.runs(f"{entity}/{project}", filters=filters or {})
 
-    Handles two formats:
-    - Benchmark results: have classifier_type + feature_type fields,
-      metrics stored in 'metrics' dict
-    - TissueFormer results: have method='tissueformer',
-      metrics stored in 'group_metrics', 'donor_majority_metrics',
-      'donor_meanlogits_metrics' dicts
-
-    Returns nested dict: results[dataset][method][group_size][fold] = metrics
-    where metrics is a flat dict with keys like 'group_accuracy',
-    'donor_meanlogits_accuracy', 'donor_meanlogits_auroc', etc.
-    """
-    results = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
-
-    for path in glob.glob(os.path.join(results_dir, "**/*_results.json"), recursive=True):
-        with open(path) as f:
-            data = json.load(f)
-
-        gs = data.get("group_size", "unknown")
-
-        # Try to infer dataset and fold from directory structure
-        parts = path.split(os.sep)
-        dataset = None
-        fold = 0
-        for p in parts:
-            for ds in DATASETS:
-                if ds in p.lower():
-                    dataset = ds
-            if "fold" in p:
-                try:
-                    fold = int(p.split("fold")[-1].split("_")[0].split(".")[0])
-                except ValueError:
-                    pass
-
-        if not dataset:
+    records = []
+    for run in runs:
+        if run.state != "finished":
             continue
+        summary = run.summary._json_dict.copy()
+        config = {k: v for k, v in run.config.items() if not k.startswith("_")}
+        record = {
+            "run_id": run.id,
+            "run_name": run.name,
+            "tags": run.tags,
+            **summary,
+        }
+        # Flatten config with dot notation
+        config_flat = pd.json_normalize(config, sep=".").to_dict(orient="records")[0]
+        record.update(config_flat)
+        records.append(record)
 
-        if data.get("method") == "tissueformer":
-            # TissueFormer result with multi-level metrics
-            metrics = {}
-            for sub_key in ("group_metrics", "donor_majority_metrics", "donor_meanlogits_metrics"):
-                sub = data.get(sub_key, {})
-                metrics.update(sub)
-            results[dataset]["tissueformer"][gs][fold] = metrics
-        else:
-            # Benchmark result — store with donor_ prefix for consistency
-            raw_metrics = data.get("metrics", {})
-            metrics = {}
-            for k, v in raw_metrics.items():
-                # Benchmark metrics have prefix like "random_forest_pseudobulk_gsN_accuracy"
-                # Extract the metric name (last part after the gs prefix)
-                suffix = k.rsplit("_", 1)[-1] if "_" in k else k
-                metrics[f"donor_meanlogits_{suffix}"] = v
-
-            clf = data.get("classifier_type", "unknown")
-            feat = data.get("feature_type", "unknown")
-            method = f"{clf}_{feat}"
-            results[dataset][method][gs][fold] = metrics
-
-    return dict(results)
+    return pd.DataFrame(records)
 
 
-def _extract_metric_values(fold_metrics, metric_key):
-    """Extract values for a metric key across folds."""
-    values = []
-    for fold, metrics in fold_metrics.items():
-        if metric_key in metrics:
-            values.append(metrics[metric_key])
-    return values
+def classify_runs(df: pd.DataFrame):
+    """Split DataFrame into TissueFormer and benchmark runs based on tags."""
+    is_benchmark = df["tags"].apply(lambda t: "benchmark" in t if isinstance(t, list) else False)
+    return df[~is_benchmark].copy(), df[is_benchmark].copy()
 
 
-def plot_accuracy_auroc_vs_groupsize(results, output_dir):
+def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
     """
     Main figure: group accuracy, donor accuracy, and donor AUROC vs group_size.
     One column per dataset, three rows.
@@ -141,61 +98,80 @@ def plot_accuracy_auroc_vs_groupsize(results, output_dir):
                              sharex=True, squeeze=False)
 
     for col, dataset in enumerate(DATASETS):
-        if dataset not in results:
-            continue
-
-        ds_results = results[dataset]
-
-        for method_key, style in METHODS.items():
-            if method_key not in ds_results:
+        # --- TissueFormer ---
+        tf_ds = tf_df[tf_df["dataset_name"] == dataset]
+        style = METHODS["tissueformer"]
+        for row, (row_label, tf_key, _) in enumerate(METRIC_ROWS):
+            if tf_key not in tf_ds.columns:
                 continue
+            subset = tf_ds[["data.group_size", tf_key]].dropna()
+            if subset.empty:
+                continue
+            grouped = subset.groupby("data.group_size")[tf_key]
+            means = grouped.mean()
+            stds = grouped.std().fillna(0)
+            axes[row, col].errorbar(
+                means.index, means.values, yerr=stds.values,
+                color=style["color"], marker=style["marker"],
+                label=style["label"], capsize=3, linewidth=1.5, markersize=5,
+            )
 
-            gs_data = ds_results[method_key]
+        # --- Benchmarks ---
+        bench_ds = bench_df[bench_df["dataset_name"] == dataset]
+        for method_key, style in METHODS.items():
+            if method_key == "tissueformer":
+                continue
+            # method_key e.g. "random_forest_pseudobulk" -> clf="random_forest", feat="pseudobulk"
+            tokens = method_key.split("_")
+            if len(tokens) < 3:
+                continue
+            clf_type = "_".join(tokens[:2])
+            feat_type = "_".join(tokens[2:])
 
-            for row, (row_label, metric_key) in enumerate(METRIC_ROWS):
+            for row, (row_label, _, bench_suffix) in enumerate(METRIC_ROWS):
+                if bench_suffix is None:
+                    continue  # Benchmarks don't have donor-level aggregation
+
+                # Find all columns matching this benchmark pattern
+                # Metric keys: {clf}_{feat}_gs{N}_{suffix}
                 x_vals, means, stds = [], [], []
-
                 for gs in GROUP_SIZES:
-                    gs_str = str(gs)
-                    if gs_str not in gs_data:
+                    col_name = f"{clf_type}_{feat_type}_gs{gs}_{bench_suffix}"
+                    if col_name not in bench_ds.columns:
                         continue
-
-                    values = _extract_metric_values(gs_data[gs_str], metric_key)
-                    if values:
+                    values = bench_ds[col_name].dropna()
+                    if len(values) > 0:
                         x_vals.append(gs)
-                        means.append(np.mean(values))
-                        stds.append(np.std(values))
+                        means.append(values.mean())
+                        stds.append(values.std() if len(values) > 1 else 0)
 
                 if x_vals:
                     axes[row, col].errorbar(
                         x_vals, means, yerr=stds,
                         color=style["color"], marker=style["marker"],
-                        label=style["label"], capsize=3, linewidth=1.5, markersize=5
+                        label=style["label"], capsize=3, linewidth=1.5, markersize=5,
                     )
 
-                # Plot whole-donor benchmark as horizontal line
-                if "all" in gs_data:
-                    values = _extract_metric_values(gs_data["all"], metric_key)
-                    if values:
-                        for v in values:
-                            axes[row, col].axhline(
-                                y=v, color=style["color"], linestyle="--",
-                                alpha=0.5, linewidth=1
-                            )
-
+        # Formatting
         axes[0, col].set_title(DATASET_LABELS.get(dataset, dataset))
         axes[-1, col].set_xlabel("Group size")
-
         for row in range(n_rows):
             axes[row, col].set_xscale("log", base=2)
             axes[row, col].xaxis.set_major_formatter(ScalarFormatter())
             axes[row, col].grid(True, alpha=0.3)
 
-    for row, (row_label, _) in enumerate(METRIC_ROWS):
+    for row, (row_label, _, _) in enumerate(METRIC_ROWS):
         axes[row, 0].set_ylabel(row_label)
 
-    # Single legend at top
-    handles, labels = axes[0, 0].get_legend_handles_labels()
+    # Single legend at top — deduplicate labels
+    handles, labels = [], []
+    for ax_row in axes:
+        for ax in ax_row:
+            h, l = ax.get_legend_handles_labels()
+            for hi, li in zip(h, l):
+                if li not in labels:
+                    handles.append(hi)
+                    labels.append(li)
     if handles:
         fig.legend(handles, labels, loc="upper center", ncol=min(len(handles), 3),
                    bbox_to_anchor=(0.5, 1.08))
@@ -209,60 +185,29 @@ def plot_accuracy_auroc_vs_groupsize(results, output_dir):
     plt.close(fig)
 
 
-def plot_confusion_matrices(results_dir, output_dir):
-    """Supplementary: confusion matrices per dataset per method (best group_size)."""
-    label_names = ["control", "mild", "severe"]
-
-    for path in glob.glob(os.path.join(results_dir, "**/*_results.json"), recursive=True):
-        with open(path) as f:
-            data = json.load(f)
-
-        if "predictions" not in data or "labels" not in data:
-            continue
-
-        preds = np.array(data["predictions"])
-        labels = np.array(data["labels"])
-        clf = data.get("classifier_type", "")
-        feat = data.get("feature_type", "")
-        gs = data.get("group_size", "")
-
-        # Get label names from data if available
-        data_label_names = data.get("label_names", {})
-        if data_label_names:
-            n_labels = max(int(k) for k in data_label_names.keys()) + 1
-            display_names = [data_label_names.get(str(i), str(i)) for i in range(n_labels)]
-        else:
-            display_names = label_names
-
-        cm = confusion_matrix(labels, preds)
-        fig, ax = plt.subplots(figsize=(5, 4))
-        disp = ConfusionMatrixDisplay(cm, display_labels=display_names)
-        disp.plot(ax=ax, cmap="Blues", values_format="d")
-        ax.set_title(f"{clf} ({feat}) gs={gs}")
-        plt.tight_layout()
-
-        os.makedirs(output_dir, exist_ok=True)
-        fname = f"confusion_{clf}_{feat}_gs{gs}.png"
-        fig.savefig(os.path.join(output_dir, fname))
-        plt.close(fig)
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Plot COVID severity results")
-    parser.add_argument("--results_dir", type=str, required=True,
-                        help="Directory containing result JSON files")
+    parser = argparse.ArgumentParser(description="Plot COVID severity results from wandb")
+    parser.add_argument("--entity", type=str, default="zadorlab",
+                        help="wandb entity")
+    parser.add_argument("--project", type=str, default="covid-severity",
+                        help="wandb project name")
     parser.add_argument("--output_dir", type=str, default="figures",
                         help="Output directory for figures")
     args = parser.parse_args()
 
-    results = load_results(args.results_dir)
+    print(f"Fetching runs from {args.entity}/{args.project}...")
+    df = fetch_runs(args.entity, args.project)
+    print(f"Fetched {len(df)} finished runs")
 
-    if results:
-        plot_accuracy_auroc_vs_groupsize(results, args.output_dir)
-        plot_confusion_matrices(args.results_dir, args.output_dir)
-        print("Plotting complete.")
-    else:
-        print(f"No results found in {args.results_dir}")
+    if df.empty:
+        print("No finished runs found.")
+        return
+
+    tf_df, bench_df = classify_runs(df)
+    print(f"  TissueFormer runs: {len(tf_df)}, Benchmark runs: {len(bench_df)}")
+
+    plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, args.output_dir)
+    print("Plotting complete.")
 
 
 if __name__ == "__main__":
