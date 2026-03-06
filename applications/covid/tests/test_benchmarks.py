@@ -108,6 +108,83 @@ class TestAggregation:
         assert not np.allclose(f1, f2)
 
 
+class TestMultiGroupAggregation:
+
+    def test_multi_group_shape(self, tmp_dir):
+        """Multi-group features should have multiple rows per donor."""
+        from applications.covid.benchmarks import aggregate_donor_features_multi
+
+        path = os.path.join(tmp_dir, "test.h5ad")
+        make_benchmark_h5ad(path, n_donors=2, cells_per_donor=100, n_genes=10)
+
+        donors = ["donor_0", "donor_1"]
+        features, labels, donor_arr = aggregate_donor_features_multi(
+            path, donors, feature_type="pseudobulk", group_size=20
+        )
+        # ceil(100/20) = 5 groups per donor, 2 donors = 10
+        assert features.shape == (10, 10)
+        assert labels.shape == (10,)
+        assert donor_arr.shape == (10,)
+        # Check each donor has 5 groups
+        assert (donor_arr == "donor_0").sum() == 5
+        assert (donor_arr == "donor_1").sum() == 5
+
+    def test_multi_group_gs1(self, tmp_dir):
+        """group_size=1 should create one group per cell."""
+        from applications.covid.benchmarks import aggregate_donor_features_multi
+
+        path = os.path.join(tmp_dir, "test.h5ad")
+        make_benchmark_h5ad(path, n_donors=2, cells_per_donor=10, n_genes=5)
+
+        features, labels, donor_arr = aggregate_donor_features_multi(
+            path, ["donor_0"], feature_type="pseudobulk", group_size=1
+        )
+        # 10 cells / gs=1 = 10 groups
+        assert features.shape == (10, 5)
+
+    def test_multi_group_padding(self, tmp_dir):
+        """Last group should be padded when n_cells % group_size != 0."""
+        from applications.covid.benchmarks import aggregate_donor_features_multi
+
+        path = os.path.join(tmp_dir, "test.h5ad")
+        make_benchmark_h5ad(path, n_donors=1, cells_per_donor=7, n_genes=5)
+
+        features, _, _ = aggregate_donor_features_multi(
+            path, ["donor_0"], feature_type="pseudobulk", group_size=3
+        )
+        # ceil(7/3) = 3 groups
+        assert features.shape == (3, 5)
+
+    def test_aggregate_to_donor(self):
+        """aggregate_to_donor should correctly aggregate predictions."""
+        from applications.covid.benchmarks import aggregate_to_donor
+
+        # 2 donors, 3 groups each
+        predictions = np.array([0, 1, 0, 2, 2, 1])
+        labels = np.array([0, 0, 0, 2, 2, 2])
+        probs = np.array([
+            [0.8, 0.1, 0.1],
+            [0.1, 0.8, 0.1],
+            [0.7, 0.2, 0.1],
+            [0.1, 0.1, 0.8],
+            [0.1, 0.1, 0.8],
+            [0.1, 0.7, 0.2],
+        ])
+        donor_ids = np.array(["d0", "d0", "d0", "d1", "d1", "d1"])
+
+        result = aggregate_to_donor(predictions, labels, probs, donor_ids, 3)
+
+        # Majority vote: d0 -> 0 (2 votes), d1 -> 2 (2 votes)
+        np.testing.assert_array_equal(result["majority_vote"]["predictions"], [0, 2])
+        np.testing.assert_array_equal(result["majority_vote"]["labels"], [0, 2])
+
+        # Mean probs for d0: mean of rows 0-2
+        expected_mp_d0 = np.mean(probs[:3], axis=0)
+        np.testing.assert_allclose(
+            result["mean_probs"]["probs"][0], expected_mp_d0, rtol=1e-5
+        )
+
+
 class TestClassifiers:
 
     def test_rf_runs(self, tmp_dir):
