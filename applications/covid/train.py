@@ -384,66 +384,72 @@ def main(cfg: DictConfig) -> None:
         if "train_loss" in metrics:
             print(f"Final training loss: {metrics['train_loss']:.4f}")
 
-        eval_metrics = trainer.evaluate()
-        trainer.log_metrics("eval", eval_metrics)
-        trainer.save_metrics("eval", eval_metrics)
+    # Shared helper: predict + compute group/donor metrics + log to wandb
+    def predict_and_log(data_key):
+        from transformers.trainer_utils import EvalPrediction
+
+        trainer.accelerator.gradient_state._reset_state()
+
+        if use_single_cell:
+            outputs = trainer.predict(datasets[data_key], metric_key_prefix=data_key)
+            logits = outputs.predictions
+            predictions = np.argmax(logits, axis=-1)
+            labels = outputs.label_ids
+            donor_ids = np.array(datasets[data_key]["donor_id"])
+        else:
+            outputs, indices, donor_ids = trainer.predict(
+                datasets[data_key], metric_key_prefix=data_key
+            )
+            logits = outputs.predictions[0] if isinstance(outputs.predictions, tuple) else outputs.predictions
+            predictions = np.argmax(logits, axis=-1)
+            labels = outputs.label_ids[0] if isinstance(outputs.label_ids, tuple) else outputs.label_ids
+
+        # Group-level metrics (cell-level for single-cell mode)
+        group_metrics = compute_metrics(
+            EvalPrediction(predictions=logits, label_ids=labels),
+            cfg.data.label_names, cfg.model.num_labels,
+        )
+        group_metrics = {f"group_{k}": v for k, v in group_metrics.items()}
+
+        # Aggregate to donor level (both methods)
+        donor_agg = aggregate_to_donor(logits, predictions, donor_ids, labels)
+
+        # Donor metrics via majority vote (no AUROC — hard predictions only)
+        mv = donor_agg["majority_vote"]
+        mv_metrics = {
+            "donor_majority_accuracy": (mv["predictions"] == mv["labels"]).mean(),
+            "donor_majority_balanced_accuracy": balanced_accuracy_score(
+                mv["labels"], mv["predictions"]
+            ),
+        }
+
+        # Donor metrics via mean logits (full metrics including AUROC)
+        ml = donor_agg["mean_logits"]
+        ml_metrics = compute_metrics(
+            EvalPrediction(predictions=ml["logits"], label_ids=ml["labels"]),
+            cfg.data.label_names, cfg.model.num_labels,
+        )
+        ml_metrics = {f"donor_meanlogits_{k}": v for k, v in ml_metrics.items()}
+
+        all_metrics = {**outputs.metrics, **group_metrics, **mv_metrics, **ml_metrics}
+        trainer.log_metrics(data_key, all_metrics)
+
+        # Log to wandb
+        wandb_metrics = {f"{data_key}/{k}": v for k, v in all_metrics.items()}
+        wandb_metrics[f"{data_key}/n_donors"] = len(mv["donor_ids"])
+        wandb_metrics[f"{data_key}/n_groups"] = len(predictions)
+        wandb.log(wandb_metrics)
+
+        return outputs, logits, predictions, labels, donor_ids, mv, ml, group_metrics, mv_metrics, ml_metrics
+
+    # Eval with group/donor metrics
+    if cfg.training.num_train_epochs > 0 and not cfg.run_test_set:
+        predict_and_log("validation")
 
     # Test
     if cfg.run_test_set:
-        from transformers.trainer_utils import EvalPrediction
-
         for data_key in ["test", "validation"]:
-            trainer.accelerator.gradient_state._reset_state()
-
-            if use_single_cell:
-                outputs = trainer.predict(datasets[data_key], metric_key_prefix=data_key)
-                logits = outputs.predictions
-                predictions = np.argmax(logits, axis=-1)
-                labels = outputs.label_ids
-                donor_ids = np.array(datasets[data_key]["donor_id"])
-            else:
-                outputs, indices, donor_ids = trainer.predict(
-                    datasets[data_key], metric_key_prefix=data_key
-                )
-                logits = outputs.predictions[0] if isinstance(outputs.predictions, tuple) else outputs.predictions
-                predictions = np.argmax(logits, axis=-1)
-                labels = outputs.label_ids[0] if isinstance(outputs.label_ids, tuple) else outputs.label_ids
-
-            # Group-level metrics (cell-level for single-cell mode)
-            group_metrics = compute_metrics(
-                EvalPrediction(predictions=logits, label_ids=labels),
-                cfg.data.label_names, cfg.model.num_labels,
-            )
-            group_metrics = {f"group_{k}": v for k, v in group_metrics.items()}
-
-            # Aggregate to donor level (both methods)
-            donor_agg = aggregate_to_donor(logits, predictions, donor_ids, labels)
-
-            # Donor metrics via majority vote (no AUROC — hard predictions only)
-            mv = donor_agg["majority_vote"]
-            mv_metrics = {
-                "donor_majority_accuracy": (mv["predictions"] == mv["labels"]).mean(),
-                "donor_majority_balanced_accuracy": balanced_accuracy_score(
-                    mv["labels"], mv["predictions"]
-                ),
-            }
-
-            # Donor metrics via mean logits (full metrics including AUROC)
-            ml = donor_agg["mean_logits"]
-            ml_metrics = compute_metrics(
-                EvalPrediction(predictions=ml["logits"], label_ids=ml["labels"]),
-                cfg.data.label_names, cfg.model.num_labels,
-            )
-            ml_metrics = {f"donor_meanlogits_{k}": v for k, v in ml_metrics.items()}
-
-            all_metrics = {**outputs.metrics, **group_metrics, **mv_metrics, **ml_metrics}
-            trainer.log_metrics(data_key, all_metrics)
-
-            # Log to wandb
-            wandb_metrics = {f"{data_key}/{k}": v for k, v in all_metrics.items()}
-            wandb_metrics[f"{data_key}/n_donors"] = len(mv["donor_ids"])
-            wandb_metrics[f"{data_key}/n_groups"] = len(predictions)
-            wandb.log(wandb_metrics)
+            _, logits, predictions, labels, donor_ids, mv, ml, group_metrics, mv_metrics, ml_metrics = predict_and_log(data_key)
 
             output_dict = {
                 "group_predictions": predictions,
