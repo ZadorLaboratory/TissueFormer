@@ -17,9 +17,10 @@ N_BENCHMARK_GROUP_SIZES=${#BENCHMARK_GROUP_SIZES[@]}
 
 # Decode flat index -> (dataset, fold, group_size)
 idx=$(( SLURM_ARRAY_TASK_ID - 1 ))
-ds_idx=$(( idx / (N_FOLDS * N_BENCHMARK_GROUP_SIZES) ))
-remainder=$(( idx % (N_FOLDS * N_BENCHMARK_GROUP_SIZES) ))
-fold=$(( remainder / N_BENCHMARK_GROUP_SIZES ))
+N_DATASETS=${#DATASETS[@]}
+fold=$(( idx / (N_DATASETS * N_BENCHMARK_GROUP_SIZES) ))
+remainder=$(( idx % (N_DATASETS * N_BENCHMARK_GROUP_SIZES) ))
+ds_idx=$(( remainder / N_BENCHMARK_GROUP_SIZES ))
 gs_idx=$(( remainder % N_BENCHMARK_GROUP_SIZES ))
 
 dataset="${DATASETS[$ds_idx]}"
