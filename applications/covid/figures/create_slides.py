@@ -114,6 +114,80 @@ def add_summary_slide(prs, name, info, adata):
     slide.shapes.add_picture(hist_buf, Inches(5.2), Inches(1.6), Inches(4.5))
 
 
+DL_BENCHMARKS = [
+    {
+        "title": "CellCnn",
+        "citation": "Arvaniti & Claassen, Nature Communications (2017)",
+        "bullets": [
+            "Detects rare disease-associated cell subsets via representation learning",
+            "1D convolutions (kernel_size=1) applied independently to each cell",
+            "Top-k mean pooling selects the most informative cells per filter",
+            "Pooled representation fed to a linear classifier",
+            "Designed for cases where only a small fraction of cells carry the signal",
+        ],
+    },
+    {
+        "title": "scAGG",
+        "citation": "Verlaan et al., CSBJ (2025)",
+        "bullets": [
+            "Single-cell gene expression analysis using graph-based aggregation",
+            "2-layer MLP cell encoder with ELU activations",
+            "Mean pooling aggregates cell embeddings into a sample-level representation",
+            "NoGraph variant (MLP + mean pooling) performs on par with graph variants",
+            "Simple architecture serves as a strong MIL-style baseline",
+        ],
+    },
+    {
+        "title": "ScRAT",
+        "citation": "Mao et al., Bioinformatics (2024)",
+        "bullets": [
+            "Transformer-based method originally developed for single-cell multi-omic integration",
+            "Linear projection + sinusoidal positional encoding → Transformer encoder",
+            "Mean pooling over cell tokens followed by a classification head",
+            "Cell-type-aware sample mixup augmentation for regularization",
+            "Uses BCE loss (one-vs-rest) with cosine LR schedule and warmup",
+        ],
+    },
+]
+
+
+def add_benchmark_slide(prs, info):
+    """Add a slide describing one DL benchmark method."""
+    slide = prs.slides.add_slide(prs.slide_layouts[5])  # Blank layout
+
+    # Title
+    txBox = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(9), Inches(0.8))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = f"Benchmark: {info['title']}"
+    p.font.size = Pt(28)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(0x2C, 0x3E, 0x50)
+
+    # Citation
+    p2 = tf.add_paragraph()
+    p2.text = info["citation"]
+    p2.font.size = Pt(14)
+    p2.font.italic = True
+    p2.font.color.rgb = RGBColor(0x7F, 0x8C, 0x8D)
+
+    # Bullet points
+    body = slide.shapes.add_textbox(Inches(0.5), Inches(1.6), Inches(9), Inches(5))
+    btf = body.text_frame
+    btf.word_wrap = True
+    for i, bullet in enumerate(info["bullets"]):
+        if i == 0:
+            bp = btf.paragraphs[0]
+        else:
+            bp = btf.add_paragraph()
+        bp.text = bullet
+        bp.font.size = Pt(18)
+        bp.space_after = Pt(10)
+        bp.level = 0
+        # Bullet character
+        bp.text = f"\u2022  {bullet}"
+
+
 def main():
     prs = Presentation()
     prs.slide_width = Inches(13.333)
@@ -124,6 +198,9 @@ def main():
         print(f"Loading {path}...")
         adata = anndata.read_h5ad(path)
         add_summary_slide(prs, name, info, adata)
+
+    for info in DL_BENCHMARKS:
+        add_benchmark_slide(prs, info)
 
     prs.save(OUTPUT_PATH)
     print(f"Saved to {OUTPUT_PATH}")
