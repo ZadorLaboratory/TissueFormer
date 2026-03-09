@@ -35,6 +35,7 @@ plt.rcParams.update({
 DATASETS = ["combat", "ren", "stevenson"]
 DATASET_LABELS = {"combat": "COMBAT", "ren": "Ren et al.", "stevenson": "Stevenson et al."}
 GROUP_SIZES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+ALL_X_POS = 2048  # x-position for the disconnected "all" point (2 log2-steps past 512)
 
 # Method display config: maps method key -> plotting style
 # Classical methods use {clf}_{feat} keys; DL methods use model name directly
@@ -55,7 +56,7 @@ METRIC_ROWS = [
     ("Group Accuracy", "test/group_accuracy", "group_accuracy"),
     ("Donor Accuracy\n(majority vote)", "test/donor_majority_accuracy", "donor_majority_accuracy"),
     ("Donor Accuracy\n(mean logits)", "test/donor_meanlogits_accuracy", "donor_meanprobs_accuracy"),
-    ("Donor AUROC\n(mean logits)", "test/donor_meanlogits_auroc", "donor_meanprobs_auroc"),
+    # ("Donor AUROC\n(mean logits)", "test/donor_meanlogits_auroc", "donor_meanprobs_auroc"),
 ]
 
 
@@ -118,17 +119,30 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
         for row, (row_label, tf_key, _) in enumerate(METRIC_ROWS):
             if tf_key not in tf_ds.columns:
                 continue
+            # Numeric group sizes (main line)
             subset = tf_ds[["data.group_size", tf_key]].dropna()
-            if subset.empty:
-                continue
-            grouped = subset.groupby("data.group_size")[tf_key]
-            means = grouped.mean()
-            stds = grouped.std().fillna(0)
-            axes[row, col].errorbar(
-                means.index, means.values, yerr=stds.values,
-                color=style["color"], marker=style["marker"],
-                label=style["label"], capsize=3, linewidth=1.5, markersize=5,
-            )
+            numeric_mask = pd.to_numeric(subset["data.group_size"], errors="coerce").notna()
+            numeric_subset = subset[numeric_mask].copy()
+            numeric_subset["data.group_size"] = pd.to_numeric(numeric_subset["data.group_size"])
+            if not numeric_subset.empty:
+                grouped = numeric_subset.groupby("data.group_size")[tf_key]
+                means = grouped.mean()
+                stds = grouped.std().fillna(0)
+                axes[row, col].errorbar(
+                    means.index, means.values, yerr=stds.values,
+                    color=style["color"], marker=style["marker"],
+                    label=style["label"], capsize=3, linewidth=1.5, markersize=5,
+                )
+            # "all" point (disconnected)
+            all_subset = subset[subset["data.group_size"] == "all"]
+            if not all_subset.empty:
+                all_mean = all_subset[tf_key].mean()
+                all_std = all_subset[tf_key].std() if len(all_subset) > 1 else 0
+                axes[row, col].errorbar(
+                    [ALL_X_POS], [all_mean], yerr=[all_std],
+                    color=style["color"], marker=style["marker"],
+                    capsize=3, linewidth=0, markersize=5,
+                )
 
         # --- Benchmarks ---
         bench_ds = bench_df[bench_df["dataset_name"] == dataset]
@@ -158,6 +172,18 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
                         label=style["label"], capsize=3, linewidth=1.5, markersize=5,
                     )
 
+                # "all" point (disconnected)
+                all_col = _build_benchmark_col_name(method_key, "all", bench_suffix)
+                if all_col in bench_ds.columns:
+                    values = pd.to_numeric(bench_ds[all_col], errors="coerce").dropna()
+                    if len(values) > 0:
+                        axes[row, col].errorbar(
+                            [ALL_X_POS], [values.mean()],
+                            yerr=[values.std() if len(values) > 1 else 0],
+                            color=style["color"], marker=style["marker"],
+                            capsize=3, linewidth=0, markersize=5,
+                        )
+
         # Formatting
         axes[0, col].set_title(DATASET_LABELS.get(dataset, dataset))
         axes[-1, col].set_xlabel("Group size")
@@ -165,6 +191,25 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
             axes[row, col].set_xscale("log", base=2)
             axes[row, col].xaxis.set_major_formatter(ScalarFormatter())
             axes[row, col].grid(True, alpha=0.3)
+            # Custom x-ticks: numeric group sizes + "all"
+            tick_positions = GROUP_SIZES + [ALL_X_POS]
+            tick_labels = [str(gs) for gs in GROUP_SIZES] + ["all"]
+            axes[row, col].set_xticks(tick_positions)
+            axes[row, col].set_xticklabels(tick_labels)
+
+    # Draw axis-break marks between 512 and "all"
+    for col in range(len(DATASETS)):
+        for row in range(n_rows):
+            ax = axes[row, col]
+            # Convert data coords to axes fraction for the break position
+            # Place break marks at the geometric mean of 512 and ALL_X_POS
+            break_x = (512 * ALL_X_POS) ** 0.5
+            trans = ax.get_xaxis_transform()
+            kwargs = dict(transform=trans, color="k", clip_on=False,
+                          linewidth=0.8)
+            d = 0.015  # size of break marks
+            ax.plot((break_x * 0.92, break_x * 1.08), (-d, d), **kwargs)
+            ax.plot((break_x * 0.92, break_x * 1.08), (-d - 0.01, d - 0.01), **kwargs)
 
     for row, (row_label, _, _) in enumerate(METRIC_ROWS):
         axes[row, 0].set_ylabel(row_label)
