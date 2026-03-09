@@ -164,6 +164,9 @@ def main():
         return
 
     tf_df, bench_df = classify_runs(df)
+    bench_df = bench_df[bench_df["tags"].apply(
+        lambda t: "with_val" in t if isinstance(t, list) else False
+    )]
     print(f"TissueFormer runs: {len(tf_df)}, Benchmark runs: {len(bench_df)}")
 
     plot_diagnostics(tf_df, bench_df, args.output_dir)
