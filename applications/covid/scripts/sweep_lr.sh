@@ -28,7 +28,7 @@ eval "$(micromamba shell hook --shell bash)"
 micromamba activate brain_annotation2
 
 DATASETS=(combat ren stevenson)
-LEARNING_RATES=(1e-6 5e-6 1e-5 5e-5 1e-4 5e-4)
+LEARNING_RATES=(1e-5 5e-5 1e-4 3e-4 5e-4 1e-3)
 N_LRS=${#LEARNING_RATES[@]}
 
 # Decode flat index -> (dataset, lr)
@@ -64,8 +64,8 @@ python train.py \
     training.learning_rate="${lr}" \
     training.fp16=true \
     +training.bf16=false \
-    training.per_device_train_batch_size=512 \
-    training.per_device_eval_batch_size=512 \
+    training.per_device_train_batch_size=1024 \
+    training.per_device_eval_batch_size=1024 \
     training.gradient_accumulation_steps="${grad_accum}" \
     training.num_train_epochs="${epochs}" \
     wandb.tags=[lr_sweep] &
