@@ -101,12 +101,15 @@ def aggregate_donor_features(
     adata = ad.read_h5ad(h5ad_path)
 
     # Filter to requested donors
+    # Compute all_cell_types from full dataset before filtering to ensure
+    # consistent feature dimensions across train/test splits
+    all_cell_types = sorted(adata.obs["cell_type"].unique()) if feature_type == "cell_type_histogram" else None
+
     mask = adata.obs["donor_id"].isin(donor_ids)
     adata = adata[mask]
 
     rng = np.random.RandomState(seed)
     unique_donors = sorted(set(donor_ids) & set(adata.obs["donor_id"].unique()))
-    all_cell_types = sorted(adata.obs["cell_type"].unique()) if feature_type == "cell_type_histogram" else None
 
     features_list = []
     labels_list = []
@@ -156,12 +159,15 @@ def aggregate_donor_features_multi(
     """
     adata = ad.read_h5ad(h5ad_path)
 
+    # Compute all_cell_types from full dataset before filtering to ensure
+    # consistent feature dimensions across train/test splits
+    all_cell_types = sorted(adata.obs["cell_type"].unique()) if feature_type == "cell_type_histogram" else None
+
     mask = adata.obs["donor_id"].isin(donor_ids)
     adata = adata[mask]
 
     rng = np.random.RandomState(seed)
     unique_donors = sorted(set(donor_ids) & set(adata.obs["donor_id"].unique()))
-    all_cell_types = sorted(adata.obs["cell_type"].unique()) if feature_type == "cell_type_histogram" else None
 
     features_list = []
     labels_list = []
