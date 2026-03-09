@@ -833,6 +833,9 @@ def run_dl_benchmark(
         "val_group_metrics": {k: float(v) for k, v in val_metrics.items()},
         "group_metrics": {k: float(v) for k, v in test_metrics.items()},
         "model_name": model_name,
+        "group_size": gs_str,
+        "classifier_type": model_name,
+        "feature_type": "dl",
     }
     result_path = os.path.join(output_dir, f"{prefix}_results.json")
     with open(result_path, "w") as f:
@@ -870,7 +873,8 @@ def main(cfg: DictConfig) -> None:
         group_size = None
 
     all_metrics = {}
-    for clf_type in ["random_forest", "logistic_regression"]:
+    run_classical = cfg.get("run_classical", True)
+    for clf_type in ["random_forest", "logistic_regression"] if run_classical else []:
         for feat_type in ["pseudobulk", "cell_type_histogram"]:
             metrics = run_benchmark(
                 h5ad_path=h5ad_path,
@@ -906,6 +910,14 @@ def main(cfg: DictConfig) -> None:
         # Allow overrides from main config
         if hasattr(cfg, "benchmark_models") and hasattr(cfg.benchmark_models, model_name):
             model_cfg = OmegaConf.merge(model_cfg, cfg.benchmark_models[model_name])
+
+        # Override cells_per with group_size for fair comparison across methods
+        cells_per_key = {
+            "cellcnn": "cells_per_input",
+            "scagg": "cells_per_sample",
+            "scrat": "cells_per_crop",
+        }[model_name]
+        OmegaConf.update(model_cfg, cells_per_key, group_size, force_add=True)
 
         metrics = run_dl_benchmark(
             h5ad_path=h5ad_path,
