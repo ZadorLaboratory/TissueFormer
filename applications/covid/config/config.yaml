@@ -10,9 +10,10 @@ defaults:
 
 seed: 42
 debug: false
-dataset_name: "combat"  # Options: combat, ren, stevenson
+dataset_name: "combat"  # Options: combat, ren, stevenson, combined
 output_dir: outputs/${dataset_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 run_test_set: true
+early_stopping_patience: 3  # Stop after N evals with no improvement; null to disable
 
 # DL benchmark flags
 run_cellcnn: false

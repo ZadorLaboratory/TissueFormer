@@ -27,10 +27,17 @@ module purge
 module load cuda12.3/toolkit/12.3.2
 module load cudnn8.6-cuda11.8/8.6.0.163
 
+# Single-GPU DeepSpeed needs these env vars to avoid MPI fallback
+export MASTER_ADDR=localhost
+export MASTER_PORT=$(( 29500 + SLURM_ARRAY_TASK_ID ))
+export WORLD_SIZE=1
+export RANK=0
+export LOCAL_RANK=0
+
 eval "$(micromamba shell hook --shell bash)"
 micromamba activate brain_annotation2
 
-DATASETS=(combat ren stevenson)
+DATASETS=(combat ren stevenson combined)
 N_FOLDS=5
 GROUP_SIZES=(1 2 4 8 16 32 64 128 256 512)
 N_GROUP_SIZES=${#GROUP_SIZES[@]}

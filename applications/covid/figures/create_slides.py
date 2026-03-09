@@ -30,6 +30,11 @@ DATASETS = {
         "citation": "Stephenson et al., Nature Medicine (2021)",
         "tissue": "Whole blood (PBMCs)",
     },
+    "combined": {
+        "title": "Combined (All Datasets)",
+        "citation": "COMBAT + Ren + Stephenson",
+        "tissue": "Whole blood (PBMCs) + airway samples",
+    },
 }
 
 

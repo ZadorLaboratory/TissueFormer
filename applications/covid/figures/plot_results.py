@@ -32,8 +32,8 @@ plt.rcParams.update({
     "font.family": "sans-serif",
 })
 
-DATASETS = ["combat", "ren", "stevenson"]
-DATASET_LABELS = {"combat": "COMBAT", "ren": "Ren et al.", "stevenson": "Stevenson et al."}
+DATASETS = ["combat", "ren", "stevenson", "combined"]
+DATASET_LABELS = {"combat": "COMBAT", "ren": "Ren et al.", "stevenson": "Stevenson et al.", "combined": "Combined"}
 GROUP_SIZES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
 ALL_X_POS = 2048  # x-position for the disconnected "all" point (2 log2-steps past 512)
 

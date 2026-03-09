@@ -16,7 +16,7 @@ mkdir -p "${PROJECT_DIR}/slurm_logs/covid"
 cd "${PROJECT_DIR}"
 
 MODE="${1:---all}"
-TOTAL_TASKS=8   # 3 datasets x 5 folds x 10 group_sizes
+TOTAL_TASKS=10   # 4 datasets x 5 folds x 10 group_sizes
 CHUNK_SIZE=8      # max array size allowed by SLURM manager
 
 # Submit a script in chunks of CHUNK_SIZE, returning colon-separated job IDs.
