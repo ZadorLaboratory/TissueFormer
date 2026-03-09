@@ -47,7 +47,13 @@ gs_idx=$(( remainder % N_GROUP_SIZES ))
 dataset="${DATASETS[$ds_idx]}"
 gs="${GROUP_SIZES[$gs_idx]}"
 
-echo "=== Task ${SLURM_ARRAY_TASK_ID}: dataset=${dataset} fold=${fold} gs=${gs} ==="
+# n = ceil(gs/16): scale grad accumulation and epochs for large group sizes
+n=$(( (gs + 15) / 16 ))
+grad_accum=$n
+base_epochs=10
+epochs=$(( base_epochs * n ))
+
+echo "=== Task ${SLURM_ARRAY_TASK_ID}: dataset=${dataset} fold=${fold} gs=${gs} n=${n} ==="
 
 # Forward SIGUSR1 to Python process for graceful preemption checkpoint
 trap 'kill -USR1 "$CHILD_PID"; wait "$CHILD_PID"' SIGUSR1
