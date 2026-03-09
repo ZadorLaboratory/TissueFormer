@@ -371,19 +371,43 @@ def run_benchmark(
     prefix = f"{method}_gs{gs_str}"
     print(f"\n--- {prefix} ---")
 
+    # Split train donors into actual_train and val donors (donor-level)
+    adata_tmp = ad.read_h5ad(h5ad_path, backed="r")
+    label_map = _get_label_map(adata_tmp)
+    donor_obs = adata_tmp.obs
+    donor_label_map = {}
+    for d in train_donors:
+        donor_label_map[d] = label_map[
+            donor_obs.loc[donor_obs["donor_id"] == d, "label"].iloc[0]
+        ]
+    del adata_tmp
+
+    n_val = max(1, round(len(train_donors) * 0.1))
+    if n_val >= len(train_donors):
+        n_val = max(1, len(train_donors) - 1)
+    donor_label_arr = np.array([donor_label_map[d] for d in train_donors])
+
+    actual_train_donors, val_donors = train_test_split(
+        train_donors,
+        test_size=n_val,
+        random_state=seed,
+        stratify=donor_label_arr,
+    )
+    print(f"  Donor split: {len(actual_train_donors)} train, {len(val_donors)} val, {len(test_donors)} test")
+
     # Aggregate features for training (1 group per donor)
     train_features, train_labels, train_donor_arr = aggregate_donor_features(
-        h5ad_path, train_donors, feature_type, group_size, seed=seed
+        h5ad_path, actual_train_donors, feature_type, group_size, seed=seed
     )
 
-    # Validation: different cells from train donors (multi-group, different seed)
+    # Validation: held-out donors (multi-group for group_size, single-group for "all")
     if group_size is not None:
         val_features, val_labels, val_donor_arr = aggregate_donor_features_multi(
-            h5ad_path, train_donors, feature_type, group_size, seed=seed + 2
+            h5ad_path, val_donors, feature_type, group_size, seed=seed + 2
         )
     else:
         val_features, val_labels, val_donor_arr = aggregate_donor_features(
-            h5ad_path, train_donors, feature_type, group_size, seed=seed + 2
+            h5ad_path, val_donors, feature_type, group_size, seed=seed + 2
         )
 
     # For testing: multi-group if group_size is set, single-group if "all"
@@ -399,6 +423,8 @@ def run_benchmark(
     # Verify donor isolation
     assert len(set(train_donor_arr) & set(test_donor_arr)) == 0, \
         "Train and test donors overlap!"
+    assert len(set(train_donor_arr) & set(val_donor_arr)) == 0, \
+        "Train and val donors overlap!"
 
     print(f"  Train: {train_features.shape}, Val: {val_features.shape}, Test: {test_features.shape}")
 
@@ -419,7 +445,12 @@ def run_benchmark(
     if hasattr(clf, "best_params_"):
         print(f"  Best params: {clf.best_params_}")
 
-    # Evaluate on validation and test
+    # Evaluate on train, validation, and test
+    train_prefix = f"{method}_gs{gs_str}_train"
+    train_metrics = _evaluate_split(
+        clf, train_features, train_labels, train_donor_arr, label_names,
+        train_prefix, group_size,
+    )
     val_prefix = f"{method}_gs{gs_str}_val"
     val_metrics = _evaluate_split(
         clf, val_features, val_labels, val_donor_arr, label_names,
@@ -430,13 +461,14 @@ def run_benchmark(
         prefix, group_size,
     )
 
-    all_metrics = {**val_metrics, **test_metrics}
+    all_metrics = {**train_metrics, **val_metrics, **test_metrics}
 
     # Save results
     os.makedirs(output_dir, exist_ok=True)
     result = {
         "method": method,
         "group_size": gs_str,
+        "train_group_metrics": {k: float(v) for k, v in train_metrics.items()},
         "val_group_metrics": {k: float(v) for k, v in val_metrics.items()},
         "group_metrics": {k: float(v) for k, v in test_metrics.items()},
         "label_names": label_names,
@@ -450,8 +482,9 @@ def run_benchmark(
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)
 
-    print(f"  Val group metrics: {val_metrics}")
-    print(f"  Test group metrics: {test_metrics}")
+    print(f"  Train metrics: {train_metrics}")
+    print(f"  Val metrics: {val_metrics}")
+    print(f"  Test metrics: {test_metrics}")
     wandb.log(all_metrics)
 
     return all_metrics
@@ -515,24 +548,25 @@ def run_dl_benchmark(
         donor_key=donor_key, label_key=label_key, cell_type_key=cell_type_key,
     )
 
-    # Split into train/test by donor
-    train_set = set(train_donors)
-    train_idx = [i for i, d in enumerate(donor_order) if d in train_set]
-    test_idx = [i for i, d in enumerate(donor_order) if d not in train_set]
+    # Split into train/test by donor, with donor-level validation split
+    all_train_set = set(train_donors)
+    all_train_idx = [i for i, d in enumerate(donor_order) if d in all_train_set]
+    test_idx = [i for i, d in enumerate(donor_order) if d not in all_train_set]
 
-    # Create validation split: held-out cells within train donors (not held-out donors)
-    rng = np.random.RandomState(seed)
-    val_fraction = 0.2
-    train_cell_indices = []
-    val_cell_indices = []
-    for i in train_idx:
-        donor_cells = sample_indices[i]
-        shuffled = rng.permutation(len(donor_cells))
-        n_val_cells = max(1, int(len(donor_cells) * val_fraction))
-        val_cell_indices.append(donor_cells[shuffled[:n_val_cells]])
-        train_cell_indices.append(donor_cells[shuffled[n_val_cells:]])
-    # val_idx uses the same donors as train_idx (for labels/donor_order lookup)
-    val_idx = train_idx
+    # Donor-level validation split
+    all_train_labels = labels[all_train_idx]
+    n_val = max(1, round(len(all_train_idx) * 0.1))
+    if n_val >= len(all_train_idx):
+        n_val = max(1, len(all_train_idx) - 1)
+
+    actual_train_idx, val_idx = train_test_split(
+        all_train_idx,
+        test_size=n_val,
+        random_state=seed,
+        stratify=all_train_labels,
+    )
+    train_idx = actual_train_idx
+    print(f"  Donor split: {len(train_idx)} train, {len(val_idx)} val, {len(test_idx)} test")
 
     # Apply preprocessing
     preprocess = model_cfg.get("preprocess", "raw")
@@ -558,12 +592,6 @@ def run_dl_benchmark(
     def make_labels(idx_list):
         return labels[idx_list]
 
-    def make_train_indices():
-        return train_cell_indices
-
-    def make_val_indices():
-        return val_cell_indices
-
     # Compute crops per donor for test sets: ceil(n_cells / group_size)
     def compute_crops_per_donor(idx_list):
         """Compute the number of non-overlapping groups per donor."""
@@ -580,12 +608,12 @@ def run_dl_benchmark(
     if model_name == "scrat":
         cells_per_crop = model_cfg.cells_per_crop
         train_ds = CroppedMILDataset(
-            X, make_train_indices(), make_labels(train_idx),
+            X, make_indices(train_idx), make_labels(train_idx),
             cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_train,
         )
         val_ds = CroppedMILDataset(
-            X, make_val_indices(), make_labels(val_idx),
+            X, make_indices(val_idx), make_labels(val_idx),
             cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_test,
         )
@@ -599,15 +627,18 @@ def run_dl_benchmark(
     elif model_name == "cellcnn":
         cells_per_input = model_cfg.get("cells_per_input", 200)
         train_ds = MILDataset(
-            X, make_train_indices(), make_labels(train_idx),
-            cells_per_sample=cells_per_input,
-        )
-        val_ds = MILDataset(
-            X, make_val_indices(), make_labels(val_idx),
+            X, make_indices(train_idx), make_labels(train_idx),
             cells_per_sample=cells_per_input,
         )
         if use_cropped_test:
-            # Use max crops across test donors for uniform CroppedMILDataset
+            # Use max crops across donors for uniform CroppedMILDataset
+            val_crops_list = compute_crops_per_donor(val_idx)
+            val_crops_per = max(val_crops_list)
+            val_ds = CroppedMILDataset(
+                X, make_indices(val_idx), make_labels(val_idx),
+                cells_per_crop=cells_per_input,
+                crops_per_sample=val_crops_per,
+            )
             test_crops_list = compute_crops_per_donor(test_idx)
             test_crops_per = max(test_crops_list)
             test_ds = CroppedMILDataset(
@@ -616,24 +647,31 @@ def run_dl_benchmark(
                 crops_per_sample=test_crops_per,
             )
         else:
+            val_ds = MILDataset(
+                X, make_indices(val_idx), make_labels(val_idx),
+                cells_per_sample=cells_per_input,
+            )
             test_ds = MILDataset(
                 X, make_indices(test_idx), make_labels(test_idx),
                 cells_per_sample=cells_per_input,
             )
             test_crops_per = 1
-        val_crops_per = 1
+            val_crops_per = 1
     else:
         # scagg
         cells_per = model_cfg.get("cells_per_sample", None)
         train_ds = MILDataset(
-            X, make_train_indices(), make_labels(train_idx),
-            cells_per_sample=cells_per,
-        )
-        val_ds = MILDataset(
-            X, make_val_indices(), make_labels(val_idx),
+            X, make_indices(train_idx), make_labels(train_idx),
             cells_per_sample=cells_per,
         )
         if use_cropped_test:
+            val_crops_list = compute_crops_per_donor(val_idx)
+            val_crops_per = max(val_crops_list)
+            val_ds = CroppedMILDataset(
+                X, make_indices(val_idx), make_labels(val_idx),
+                cells_per_crop=cells_per if cells_per else 5000,
+                crops_per_sample=val_crops_per,
+            )
             test_crops_list = compute_crops_per_donor(test_idx)
             test_crops_per = max(test_crops_list)
             test_ds = CroppedMILDataset(
@@ -642,12 +680,16 @@ def run_dl_benchmark(
                 crops_per_sample=test_crops_per,
             )
         else:
+            val_ds = MILDataset(
+                X, make_indices(val_idx), make_labels(val_idx),
+                cells_per_sample=cells_per,
+            )
             test_ds = MILDataset(
                 X, make_indices(test_idx), make_labels(test_idx),
                 cells_per_sample=cells_per,
             )
             test_crops_per = 1
-        val_crops_per = 1
+            val_crops_per = 1
 
     batch_size = model_cfg.batch_size
     train_loader = DataLoader(
@@ -775,17 +817,19 @@ def run_dl_benchmark(
 
     prefix = f"{model_name}_gs{gs_str}"
 
-    # Evaluate on validation (held-out cells from train donors) and test
+    # Evaluate on train, validation (held-out donors), and test
+    train_metrics = _eval_dl_split(train_loader, train_idx, 1, f"{model_name}_gs{gs_str}_train")
     val_metrics = _eval_dl_split(val_loader, val_idx, val_crops_per, f"{model_name}_gs{gs_str}_val")
     test_metrics = _eval_dl_split(test_loader, test_idx, test_crops_per, prefix)
 
-    all_metrics = {**val_metrics, **test_metrics}
+    all_metrics = {**train_metrics, **val_metrics, **test_metrics}
 
     # Save results
     os.makedirs(output_dir, exist_ok=True)
     result = {
         "method": model_name,
         "group_size": gs_str,
+        "train_group_metrics": {k: float(v) for k, v in train_metrics.items()},
         "val_group_metrics": {k: float(v) for k, v in val_metrics.items()},
         "group_metrics": {k: float(v) for k, v in test_metrics.items()},
         "model_name": model_name,
@@ -794,6 +838,7 @@ def run_dl_benchmark(
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)
 
+    print(f"  Train metrics: {train_metrics}")
     print(f"  Val metrics: {val_metrics}")
     print(f"  Test metrics: {test_metrics}")
     wandb.log(all_metrics)

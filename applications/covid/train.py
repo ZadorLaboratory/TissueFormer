@@ -22,6 +22,7 @@ from transformers import (
     TrainingArguments,
     Trainer,
     BertForSequenceClassification,
+    EarlyStoppingCallback,
     set_seed,
 )
 from sklearn.metrics import classification_report, roc_auc_score, balanced_accuracy_score
@@ -115,24 +116,46 @@ def prepare_datasets(dataset, donor_splits, cv_fold, config):
 
     The full tokenized dataset is split into train/test using donor
     assignments from *donor_splits*, then train is further divided into
-    train/validation.
+    train/validation by holding out entire donors (not random cells).
     """
     fold_info = donor_splits["folds"][str(cv_fold)]
-    train_donors = set(fold_info["train_donors"])
+    train_donors_list = list(fold_info["train_donors"])
     test_donors = set(fold_info["test_donors"])
 
     donor_ids = np.array(dataset["donor_id"])
-    train_mask = np.isin(donor_ids, list(train_donors))
+
+    # Split train donors into actual_train and val donors (donor-level)
+    # Get one label per donor for stratification
+    donor_labels = {}
+    label_key = config.data.get("label_key", "label")
+    for d in train_donors_list:
+        mask = donor_ids == d
+        donor_labels[d] = dataset[label_key][np.where(mask)[0][0]]
+
+    n_val = max(1, round(len(train_donors_list) * config.data.validation_split))
+    if n_val >= len(train_donors_list):
+        n_val = max(1, len(train_donors_list) - 1)
+
+    donor_label_arr = np.array([donor_labels[d] for d in train_donors_list])
+    actual_train_donors, val_donors = train_test_split(
+        train_donors_list,
+        test_size=n_val,
+        random_state=config.seed,
+        stratify=donor_label_arr,
+    )
+
+    actual_train_donors = set(actual_train_donors)
+    val_donors = set(val_donors)
+    print(f"  Donor split: {len(actual_train_donors)} train, {len(val_donors)} val, {len(test_donors)} test")
+    print(f"  Val donors: {sorted(val_donors)}")
+
+    train_mask = np.isin(donor_ids, list(actual_train_donors))
+    val_mask = np.isin(donor_ids, list(val_donors))
     test_mask = np.isin(donor_ids, list(test_donors))
 
     train_dataset = dataset.select(np.where(train_mask)[0])
+    val_dataset = dataset.select(np.where(val_mask)[0])
     test_dataset = dataset.select(np.where(test_mask)[0])
-
-    train_idx, val_idx = train_test_split(
-        np.arange(len(train_dataset)),
-        test_size=config.data.validation_split,
-        random_state=config.seed,
-    )
 
     # Add unique IDs
     test_dataset = test_dataset.add_column(
@@ -141,9 +164,9 @@ def prepare_datasets(dataset, donor_splits, cv_fold, config):
     train_dataset = train_dataset.add_column(
         "uuid", np.arange(len(train_dataset))
     )
-
-    val_dataset = train_dataset.select(val_idx)
-    train_dataset = train_dataset.select(train_idx)
+    val_dataset = val_dataset.add_column(
+        "uuid", np.arange(len(val_dataset))
+    )
 
     if hasattr(config.data, "max_train_samples") and config.data.max_train_samples:
         train_dataset = train_dataset.select(
@@ -320,6 +343,12 @@ def main(cfg: DictConfig) -> None:
     class_weights = get_class_weights(cfg, train_labels)
     model = create_model(cfg, class_weights)
 
+    callbacks = []
+    if cfg.get("early_stopping_patience"):
+        callbacks.append(EarlyStoppingCallback(
+            early_stopping_patience=cfg.early_stopping_patience,
+        ))
+
     trainer_params = {
         "model": model,
         "args": TrainingArguments(**cfg.training),
@@ -328,6 +357,7 @@ def main(cfg: DictConfig) -> None:
         "compute_metrics": lambda pred: compute_metrics(
             pred, cfg.data.label_names, cfg.model.num_labels
         ),
+        "callbacks": callbacks,
     }
 
     if use_single_cell:
@@ -444,10 +474,12 @@ def main(cfg: DictConfig) -> None:
 
     # Eval with group/donor metrics
     if cfg.training.num_train_epochs > 0 and not cfg.run_test_set:
+        predict_and_log("train")
         predict_and_log("validation")
 
     # Test
     if cfg.run_test_set:
+        predict_and_log("train")
         for data_key in ["test", "validation"]:
             _, logits, predictions, labels, donor_ids, mv, ml, group_metrics, mv_metrics, ml_metrics = predict_and_log(data_key)
 
