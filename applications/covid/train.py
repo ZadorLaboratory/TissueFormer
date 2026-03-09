@@ -78,6 +78,10 @@ def create_model(config: DictConfig, class_weights=None):
             pretrained_bert = BertModel.from_pretrained(bert_path)
             model.bert.load_state_dict(pretrained_bert.state_dict())
 
+        if config.model.get("freeze_bert", False):
+            for param in model.bert.parameters():
+                param.requires_grad = False
+
         if hasattr(model, "class_weights") and class_weights is not None:
             model.class_weights = class_weights
     else:

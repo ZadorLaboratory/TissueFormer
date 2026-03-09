@@ -14,6 +14,7 @@ rms_layernorm: false
 
 # Model behavior flags
 detach_bert_embeddings: false
+freeze_bert: false  # Freeze BERT parameters; only train set-transformer layers
 single_cell_loss_after_set: false
 single_cell_vs_group_weight: 0.0  # No single-cell auxiliary loss
 bert_micro_batch_size: 0  # 0 = disabled; set to e.g. 64 to reduce peak GPU memory
