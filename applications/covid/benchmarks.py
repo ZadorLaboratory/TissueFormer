@@ -314,6 +314,40 @@ def evaluate_predictions(labels, predictions, probs, label_names, prefix):
     return metrics
 
 
+def _evaluate_split(clf, features, labels, donor_arr, label_names, prefix, group_size):
+    """Predict and compute group + donor metrics for a single data split.
+
+    Returns a dict of all metrics for this split.
+    """
+    predictions = clf.predict(features)
+    probs = clf.predict_proba(features)
+    n_classes = probs.shape[1]
+
+    group_metrics = evaluate_predictions(
+        labels, predictions, probs, label_names, f"{prefix}_group",
+    )
+
+    if group_size is not None:
+        donor_agg = aggregate_to_donor(
+            predictions, labels, probs, donor_arr, n_classes
+        )
+        mv = donor_agg["majority_vote"]
+        donor_mv_metrics = evaluate_predictions(
+            mv["labels"], mv["predictions"], mv["probs"], label_names,
+            f"{prefix}_donor_majority",
+        )
+        mp = donor_agg["mean_probs"]
+        donor_mp_metrics = evaluate_predictions(
+            mp["labels"], mp["predictions"], mp["probs"], label_names,
+            f"{prefix}_donor_meanprobs",
+        )
+    else:
+        donor_mv_metrics = {}
+        donor_mp_metrics = {}
+
+    return {**group_metrics, **donor_mv_metrics, **donor_mp_metrics}
+
+
 def run_benchmark(
     h5ad_path: str,
     train_donors: list,
@@ -329,8 +363,8 @@ def run_benchmark(
     Run a single classical benchmark.
 
     Training uses one group of group_size cells per donor.
-    Testing creates ceil(n_cells/gs) non-overlapping groups per donor,
-    reports group-level metrics and donor-aggregated metrics.
+    Validation uses different cells from the same train donors (multi-group).
+    Testing creates ceil(n_cells/gs) non-overlapping groups per test donor.
     """
     gs_str = "all" if group_size is None else str(group_size)
     method = f"{classifier_type}_{feature_type}"
@@ -341,6 +375,16 @@ def run_benchmark(
     train_features, train_labels, train_donor_arr = aggregate_donor_features(
         h5ad_path, train_donors, feature_type, group_size, seed=seed
     )
+
+    # Validation: different cells from train donors (multi-group, different seed)
+    if group_size is not None:
+        val_features, val_labels, val_donor_arr = aggregate_donor_features_multi(
+            h5ad_path, train_donors, feature_type, group_size, seed=seed + 2
+        )
+    else:
+        val_features, val_labels, val_donor_arr = aggregate_donor_features(
+            h5ad_path, train_donors, feature_type, group_size, seed=seed + 2
+        )
 
     # For testing: multi-group if group_size is set, single-group if "all"
     if group_size is not None:
@@ -356,11 +400,12 @@ def run_benchmark(
     assert len(set(train_donor_arr) & set(test_donor_arr)) == 0, \
         "Train and test donors overlap!"
 
-    print(f"  Train: {train_features.shape}, Test: {test_features.shape}")
+    print(f"  Train: {train_features.shape}, Val: {val_features.shape}, Test: {test_features.shape}")
 
     # Scale features
     scaler = StandardScaler()
     train_features = scaler.fit_transform(train_features)
+    val_features = scaler.transform(val_features)
     test_features = scaler.transform(test_features)
 
     # Check for NaN/Inf
@@ -374,49 +419,26 @@ def run_benchmark(
     if hasattr(clf, "best_params_"):
         print(f"  Best params: {clf.best_params_}")
 
-    # Predict on test groups
-    test_predictions = clf.predict(test_features)
-    test_probs = clf.predict_proba(test_features)
-
-    # Determine n_classes from probs
-    n_classes = test_probs.shape[1]
-
-    # Group-level metrics
-    group_metrics = evaluate_predictions(
-        test_labels, test_predictions, test_probs, label_names,
-        f"{prefix}_group",
+    # Evaluate on validation and test
+    val_prefix = f"{method}_gs{gs_str}_val"
+    val_metrics = _evaluate_split(
+        clf, val_features, val_labels, val_donor_arr, label_names,
+        val_prefix, group_size,
+    )
+    test_metrics = _evaluate_split(
+        clf, test_features, test_labels, test_donor_arr, label_names,
+        prefix, group_size,
     )
 
-    # Donor-level metrics (aggregate groups per donor)
-    if group_size is not None:
-        donor_agg = aggregate_to_donor(
-            test_predictions, test_labels, test_probs, test_donor_arr, n_classes
-        )
-        mv = donor_agg["majority_vote"]
-        donor_mv_metrics = evaluate_predictions(
-            mv["labels"], mv["predictions"], mv["probs"], label_names,
-            f"{prefix}_donor_majority",
-        )
-        mp = donor_agg["mean_probs"]
-        donor_mp_metrics = evaluate_predictions(
-            mp["labels"], mp["predictions"], mp["probs"], label_names,
-            f"{prefix}_donor_meanprobs",
-        )
-    else:
-        # group_size=None: group IS the donor (all cells), no aggregation needed
-        donor_mv_metrics = {}
-        donor_mp_metrics = {}
-
-    all_metrics = {**group_metrics, **donor_mv_metrics, **donor_mp_metrics}
+    all_metrics = {**val_metrics, **test_metrics}
 
     # Save results
     os.makedirs(output_dir, exist_ok=True)
     result = {
         "method": method,
         "group_size": gs_str,
-        "group_metrics": {k: float(v) for k, v in group_metrics.items()},
-        "donor_majority_metrics": {k: float(v) for k, v in donor_mv_metrics.items()},
-        "donor_meanprobs_metrics": {k: float(v) for k, v in donor_mp_metrics.items()},
+        "val_group_metrics": {k: float(v) for k, v in val_metrics.items()},
+        "group_metrics": {k: float(v) for k, v in test_metrics.items()},
         "label_names": label_names,
         "classifier_type": classifier_type,
         "feature_type": feature_type,
@@ -428,10 +450,8 @@ def run_benchmark(
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)
 
-    print(f"  Group metrics: {group_metrics}")
-    if donor_mv_metrics:
-        print(f"  Donor majority metrics: {donor_mv_metrics}")
-        print(f"  Donor meanprobs metrics: {donor_mp_metrics}")
+    print(f"  Val group metrics: {val_metrics}")
+    print(f"  Test group metrics: {test_metrics}")
     wandb.log(all_metrics)
 
     return all_metrics
@@ -500,12 +520,19 @@ def run_dl_benchmark(
     train_idx = [i for i, d in enumerate(donor_order) if d in train_set]
     test_idx = [i for i, d in enumerate(donor_order) if d not in train_set]
 
-    # Create validation split from train
+    # Create validation split: held-out cells within train donors (not held-out donors)
     rng = np.random.RandomState(seed)
-    rng.shuffle(train_idx)
-    n_val = max(1, len(train_idx) // 5)
-    val_idx = train_idx[:n_val]
-    train_idx = train_idx[n_val:]
+    val_fraction = 0.2
+    train_cell_indices = []
+    val_cell_indices = []
+    for i in train_idx:
+        donor_cells = sample_indices[i]
+        shuffled = rng.permutation(len(donor_cells))
+        n_val_cells = max(1, int(len(donor_cells) * val_fraction))
+        val_cell_indices.append(donor_cells[shuffled[:n_val_cells]])
+        train_cell_indices.append(donor_cells[shuffled[n_val_cells:]])
+    # val_idx uses the same donors as train_idx (for labels/donor_order lookup)
+    val_idx = train_idx
 
     # Apply preprocessing
     preprocess = model_cfg.get("preprocess", "raw")
@@ -531,6 +558,12 @@ def run_dl_benchmark(
     def make_labels(idx_list):
         return labels[idx_list]
 
+    def make_train_indices():
+        return train_cell_indices
+
+    def make_val_indices():
+        return val_cell_indices
+
     # Compute crops per donor for test sets: ceil(n_cells / group_size)
     def compute_crops_per_donor(idx_list):
         """Compute the number of non-overlapping groups per donor."""
@@ -547,12 +580,12 @@ def run_dl_benchmark(
     if model_name == "scrat":
         cells_per_crop = model_cfg.cells_per_crop
         train_ds = CroppedMILDataset(
-            X, make_indices(train_idx), make_labels(train_idx),
+            X, make_train_indices(), make_labels(train_idx),
             cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_train,
         )
         val_ds = CroppedMILDataset(
-            X, make_indices(val_idx), make_labels(val_idx),
+            X, make_val_indices(), make_labels(val_idx),
             cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_test,
         )
@@ -562,14 +595,15 @@ def run_dl_benchmark(
             crops_per_sample=model_cfg.crops_per_patient_test,
         )
         test_crops_per = model_cfg.crops_per_patient_test
+        val_crops_per = model_cfg.crops_per_patient_test
     elif model_name == "cellcnn":
         cells_per_input = model_cfg.get("cells_per_input", 200)
         train_ds = MILDataset(
-            X, make_indices(train_idx), make_labels(train_idx),
+            X, make_train_indices(), make_labels(train_idx),
             cells_per_sample=cells_per_input,
         )
         val_ds = MILDataset(
-            X, make_indices(val_idx), make_labels(val_idx),
+            X, make_val_indices(), make_labels(val_idx),
             cells_per_sample=cells_per_input,
         )
         if use_cropped_test:
@@ -587,15 +621,16 @@ def run_dl_benchmark(
                 cells_per_sample=cells_per_input,
             )
             test_crops_per = 1
+        val_crops_per = 1
     else:
         # scagg
         cells_per = model_cfg.get("cells_per_sample", None)
         train_ds = MILDataset(
-            X, make_indices(train_idx), make_labels(train_idx),
+            X, make_train_indices(), make_labels(train_idx),
             cells_per_sample=cells_per,
         )
         val_ds = MILDataset(
-            X, make_indices(val_idx), make_labels(val_idx),
+            X, make_val_indices(), make_labels(val_idx),
             cells_per_sample=cells_per,
         )
         if use_cropped_test:
@@ -612,6 +647,7 @@ def run_dl_benchmark(
                 cells_per_sample=cells_per,
             )
             test_crops_per = 1
+        val_crops_per = 1
 
     batch_size = model_cfg.batch_size
     train_loader = DataLoader(
@@ -708,63 +744,58 @@ def run_dl_benchmark(
     # Train
     trainer.train()
 
-    # Evaluate on test set
-    test_loss, test_preds, test_labels, test_probs = trainer.eval_epoch(test_loader)
+    # Helper to evaluate a split and compute group + donor metrics
+    def _eval_dl_split(loader, split_idx, crops_per, prefix_str):
+        _, preds, labs, probs = trainer.eval_epoch(loader)
+        split_group = evaluate_predictions(
+            labs, preds, probs, label_names, f"{prefix_str}_group"
+        )
+        n_patients = len(split_idx)
+        if crops_per > 1:
+            donor_ids = np.array([
+                donor_order[split_idx[p]]
+                for p in range(n_patients)
+                for _ in range(crops_per)
+            ])
+            donor_agg = aggregate_to_donor(preds, labs, probs, donor_ids, n_classes)
+            mv = donor_agg["majority_vote"]
+            split_mv = evaluate_predictions(
+                mv["labels"], mv["predictions"], mv["probs"], label_names,
+                f"{prefix_str}_donor_majority",
+            )
+            mp = donor_agg["mean_probs"]
+            split_mp = evaluate_predictions(
+                mp["labels"], mp["predictions"], mp["probs"], label_names,
+                f"{prefix_str}_donor_meanprobs",
+            )
+        else:
+            split_mv = {}
+            split_mp = {}
+        return {**split_group, **split_mv, **split_mp}
 
     prefix = f"{model_name}_gs{gs_str}"
 
-    # Group-level metrics (per-crop accuracy)
-    group_metrics = evaluate_predictions(
-        test_labels, test_preds, test_probs, label_names, f"{prefix}_group"
-    )
+    # Evaluate on validation (held-out cells from train donors) and test
+    val_metrics = _eval_dl_split(val_loader, val_idx, val_crops_per, f"{model_name}_gs{gs_str}_val")
+    test_metrics = _eval_dl_split(test_loader, test_idx, test_crops_per, prefix)
 
-    # Donor-level metrics (aggregate crops per donor)
-    n_patients = len(test_idx)
-    if test_crops_per > 1:
-        # Build donor_ids array matching the per-crop predictions
-        test_donor_ids = np.array([
-            donor_order[test_idx[p]]
-            for p in range(n_patients)
-            for _ in range(test_crops_per)
-        ])
-        donor_agg = aggregate_to_donor(
-            test_preds, test_labels, test_probs, test_donor_ids, n_classes
-        )
-        mv = donor_agg["majority_vote"]
-        donor_mv_metrics = evaluate_predictions(
-            mv["labels"], mv["predictions"], mv["probs"], label_names,
-            f"{prefix}_donor_majority",
-        )
-        mp = donor_agg["mean_probs"]
-        donor_mp_metrics = evaluate_predictions(
-            mp["labels"], mp["predictions"], mp["probs"], label_names,
-            f"{prefix}_donor_meanprobs",
-        )
-    else:
-        # 1 prediction per donor, group == donor
-        donor_mv_metrics = {}
-        donor_mp_metrics = {}
-
-    all_metrics = {**group_metrics, **donor_mv_metrics, **donor_mp_metrics}
+    all_metrics = {**val_metrics, **test_metrics}
 
     # Save results
     os.makedirs(output_dir, exist_ok=True)
     result = {
         "method": model_name,
         "group_size": gs_str,
-        "group_metrics": {k: float(v) for k, v in group_metrics.items()},
-        "donor_majority_metrics": {k: float(v) for k, v in donor_mv_metrics.items()},
-        "donor_meanprobs_metrics": {k: float(v) for k, v in donor_mp_metrics.items()},
+        "val_group_metrics": {k: float(v) for k, v in val_metrics.items()},
+        "group_metrics": {k: float(v) for k, v in test_metrics.items()},
         "model_name": model_name,
     }
     result_path = os.path.join(output_dir, f"{prefix}_results.json")
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)
 
-    print(f"  Group metrics: {group_metrics}")
-    if donor_mv_metrics:
-        print(f"  Donor majority metrics: {donor_mv_metrics}")
-        print(f"  Donor meanprobs metrics: {donor_mp_metrics}")
+    print(f"  Val metrics: {val_metrics}")
+    print(f"  Test metrics: {test_metrics}")
     wandb.log(all_metrics)
 
     return all_metrics
