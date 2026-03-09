@@ -39,16 +39,23 @@ ALL_X_POS = 2048  # x-position for the disconnected "all" point (2 log2-steps pa
 
 # Method display config: maps method key -> plotting style
 # Classical methods use {clf}_{feat} keys; DL methods use model name directly
-METHODS = {
-    "tissueformer": {"color": "#2196F3", "marker": "o", "label": "TissueFormer"},
+CLASSICAL_METHODS = {
     "random_forest_pseudobulk": {"color": "#4CAF50", "marker": "s", "label": "RF (pseudobulk)"},
     "logistic_regression_pseudobulk": {"color": "#FF9800", "marker": "^", "label": "LR (pseudobulk)"},
     "random_forest_cell_type_histogram": {"color": "#9C27B0", "marker": "D", "label": "RF (cell type)"},
     "logistic_regression_cell_type_histogram": {"color": "#F44336", "marker": "v", "label": "LR (cell type)"},
+}
+
+DL_METHODS = {
     "cellcnn": {"color": "#00BCD4", "marker": "P", "label": "CellCnn"},
     "scagg": {"color": "#795548", "marker": "X", "label": "scAGG"},
     "scrat": {"color": "#607D8B", "marker": "h", "label": "ScRAT"},
 }
+
+TISSUEFORMER = {"tissueformer": {"color": "#2196F3", "marker": "o", "label": "TissueFormer"}}
+
+# Combined dict for backward compatibility (used by plot_diagnostics)
+METHODS = {**TISSUEFORMER, **CLASSICAL_METHODS, **DL_METHODS}
 
 # Metric rows: (display_label, tissueformer_key, benchmark_suffix)
 # Benchmark metrics are logged as {method}_gs{N}_{suffix}
@@ -102,10 +109,21 @@ def _build_benchmark_col_name(method_key, gs, suffix):
     return f"{method_key}_gs{gs}_{suffix}"
 
 
-def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
+def _get_benchmark_methods(benchmark_type):
+    """Return the benchmark methods dict for the given type."""
+    if benchmark_type == "classical":
+        return CLASSICAL_METHODS
+    elif benchmark_type == "dl":
+        return DL_METHODS
+    else:
+        raise ValueError(f"Unknown benchmark_type: {benchmark_type!r}. Use 'classical' or 'dl'.")
+
+
+def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type="classical"):
     """
     Main figure: group accuracy, donor accuracy, and donor AUROC vs group_size.
     One column per dataset, one row per metric.
+    benchmark_type: 'classical' or 'dl' — selects which benchmarks to plot.
     """
     n_rows = len(METRIC_ROWS)
     fig, axes = plt.subplots(n_rows, len(DATASETS),
@@ -146,9 +164,8 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
 
         # --- Benchmarks ---
         bench_ds = bench_df[bench_df["dataset_name"] == dataset]
-        for method_key, style in METHODS.items():
-            if method_key == "tissueformer":
-                continue
+        bench_methods = _get_benchmark_methods(benchmark_type)
+        for method_key, style in bench_methods.items():
 
             for row, (row_label, _, bench_suffix) in enumerate(METRIC_ROWS):
                 if bench_suffix is None:
@@ -229,7 +246,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    save_path = os.path.join(output_dir, "accuracy_auroc_vs_groupsize.pdf")
+    save_path = os.path.join(output_dir, f"accuracy_auroc_vs_groupsize_{benchmark_type}.pdf")
     fig.savefig(save_path)
     fig.savefig(save_path.replace(".pdf", ".png"))
     print(f"Saved main figure to {save_path}")
@@ -244,6 +261,9 @@ def main():
                         help="wandb project name")
     parser.add_argument("--output_dir", type=str, default="figures",
                         help="Output directory for figures")
+    parser.add_argument("--benchmark_type", type=str, default="classical",
+                        choices=["classical", "dl"],
+                        help="Which benchmarks to plot: 'classical' (RF/LR) or 'dl' (CellCnn/scAGG/ScRAT)")
     args = parser.parse_args()
 
     print(f"Fetching runs from {args.entity}/{args.project}...")
@@ -257,7 +277,7 @@ def main():
     tf_df, bench_df = classify_runs(df)
     print(f"  TissueFormer runs: {len(tf_df)}, Benchmark runs: {len(bench_df)}")
 
-    plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, args.output_dir)
+    plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, args.output_dir, args.benchmark_type)
     print("Plotting complete.")
 
 

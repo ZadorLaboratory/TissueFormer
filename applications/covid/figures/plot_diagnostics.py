@@ -19,7 +19,7 @@ import wandb
 
 from plot_results import (
     fetch_runs, classify_runs,
-    DATASETS, DATASET_LABELS, GROUP_SIZES, METHODS,
+    DATASETS, DATASET_LABELS, GROUP_SIZES, METHODS, CLASSICAL_METHODS, DL_METHODS,
     _build_benchmark_col_name,
 )
 
