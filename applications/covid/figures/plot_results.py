@@ -145,7 +145,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir):
                     col_name = _build_benchmark_col_name(method_key, gs, bench_suffix)
                     if col_name not in bench_ds.columns:
                         continue
-                    values = bench_ds[col_name].dropna()
+                    values = pd.to_numeric(bench_ds[col_name], errors="coerce").dropna()
                     if len(values) > 0:
                         x_vals.append(gs)
                         means.append(values.mean())
