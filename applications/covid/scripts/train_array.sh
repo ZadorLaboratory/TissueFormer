@@ -7,16 +7,19 @@
 #SBATCH --mem=80G
 #SBATCH --gres=gpu:h100:1
 #SBATCH --partition=gpuq
-#SBATCH --time=1-00:00:00
-#SBATCH --qos=slow_nice
+#SBATCH --time=2-00:00:00
+#SBATCH --qos=bio_ai
 #SBATCH --requeue
 #SBATCH --signal=B:SIGUSR1@120
-#SBATCH --array=1-150%8
+#SBATCH --array=1-10
 
-# 3 datasets x 5 folds x 10 group_sizes = 150 tasks
+# 3 datasets x 5 folds x 10 group_sizes = 150 tasks, spread across 8 array slots.
+# Each slot runs ceil(remaining/8) configurations serially.
+# Set FIRST_CONFIG to skip already-completed configs (1-based, default 1).
+#   FIRST_CONFIG=11 sbatch scripts/train_array.sh   # skip first 10
 
 if [ -z "${SLURM_ARRAY_TASK_ID:-}" ]; then
-    echo "ERROR: SLURM_ARRAY_TASK_ID not set. Use: sbatch --array=N-M scripts/train_array.sh" >&2
+    echo "ERROR: SLURM_ARRAY_TASK_ID not set. Use: sbatch scripts/train_array.sh" >&2
     exit 1
 fi
 
@@ -32,11 +35,13 @@ N_FOLDS=5
 GROUP_SIZES=(1 2 4 8 16 32 64 128 256 512)
 N_GROUP_SIZES=${#GROUP_SIZES[@]}
 
-# Decode flat index -> (dataset, fold, group_size)
+cd "$SLURM_SUBMIT_DIR"
+
 idx=$(( SLURM_ARRAY_TASK_ID - 1 ))
-ds_idx=$(( idx / (N_FOLDS * N_GROUP_SIZES) ))
-remainder=$(( idx % (N_FOLDS * N_GROUP_SIZES) ))
-fold=$(( remainder / N_GROUP_SIZES ))
+N_DATASETS=${#DATASETS[@]}
+fold=$(( idx / (N_DATASETS * N_GROUP_SIZES) ))
+remainder=$(( idx % (N_DATASETS * N_GROUP_SIZES) ))
+ds_idx=$(( remainder / N_GROUP_SIZES ))
 gs_idx=$(( remainder % N_GROUP_SIZES ))
 
 dataset="${DATASETS[$ds_idx]}"
@@ -44,17 +49,8 @@ gs="${GROUP_SIZES[$gs_idx]}"
 
 echo "=== Task ${SLURM_ARRAY_TASK_ID}: dataset=${dataset} fold=${fold} gs=${gs} ==="
 
-cd "$SLURM_SUBMIT_DIR"
-
 # Forward SIGUSR1 to Python process for graceful preemption checkpoint
 trap 'kill -USR1 "$CHILD_PID"; wait "$CHILD_PID"' SIGUSR1
-
-# Single-GPU DeepSpeed needs these env vars to avoid MPI fallback
-export MASTER_ADDR=localhost
-export MASTER_PORT=$(( 29500 + SLURM_ARRAY_TASK_ID ))
-export WORLD_SIZE=1
-export RANK=0
-export LOCAL_RANK=0
 
 if [ "$gs" -eq 1 ]; then
     python train.py \
@@ -70,7 +66,9 @@ if [ "$gs" -eq 1 ]; then
         training.fp16=false \
         +training.bf16=true \
         training.per_device_train_batch_size=512 \
-        training.per_device_eval_batch_size=512 &
+        training.per_device_eval_batch_size=512 \
+        training.gradient_accumulation_steps="${grad_accum}" \
+        training.num_train_epochs="${epochs}" &
     CHILD_PID=$!
     wait "$CHILD_PID"
 else
@@ -78,14 +76,17 @@ else
         dataset_name="${dataset}" \
         data.group_size="${gs}" \
         data.dataset_path="/grid/zador/data_norepl/Ari/transcriptomics/covid/${dataset}.dataset" \
-        data.splits_path="/grid/zador/data_norepl/Ari/transcriptomics/covid//${dataset}_donor_splits.json" \
+        data.splits_path="/grid/zador/data_norepl/Ari/transcriptomics/covid/${dataset}_donor_splits.json" \
         model.bert_path_or_name="/grid/zador/data_norepl/Ari/transcriptomics/geneformer_models/base_human_geneformer" \
         data.cv_fold="${fold}" \
         seed="${fold}" \
         training.fp16=true \
         +training.bf16=false \
         training.per_device_train_batch_size=512 \
-        training.per_device_eval_batch_size=512 &
+        training.per_device_eval_batch_size=512 \
+        training.gradient_accumulation_steps="${grad_accum}" \
+        wandb.tags=[with_val] \
+        training.num_train_epochs="${epochs}" &
     CHILD_PID=$!
     wait "$CHILD_PID"
 fi
