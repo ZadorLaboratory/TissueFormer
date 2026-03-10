@@ -19,6 +19,14 @@ early_stopping_patience: 3  # Stop after N evals with no improvement; null to di
 run_cellcnn: false
 run_scagg: false
 run_scrat: false
+run_classical: true
+model_checkpoint_path: null
+
+attention_analysis:
+  layer: -1
+  top_k: 15
+  split: test
+  max_groups: null
 
 hydra:
   run:

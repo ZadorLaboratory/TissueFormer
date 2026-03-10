@@ -33,7 +33,7 @@ from tissueformer.train import prepare_datasets
 def main(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
 
-    assert hasattr(cfg, "model_checkpoint_path"), (
+    assert cfg.model_checkpoint_path is not None, (
         "model_checkpoint_path must be set (path to a trained TissueFormer checkpoint)"
     )
 
