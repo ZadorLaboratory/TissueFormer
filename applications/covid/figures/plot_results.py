@@ -275,7 +275,8 @@ def main():
         return
 
     tf_df, bench_df = classify_runs(df)
-    print(f"  TissueFormer runs: {len(tf_df)}, Benchmark runs: {len(bench_df)}")
+    tf_df = tf_df[tf_df["tags"].apply(lambda t: "with_val" in t if isinstance(t, list) else False)]
+    print(f"  TissueFormer runs: {len(tf_df)} (filtered by 'with_val' tag), Benchmark runs: {len(bench_df)}")
 
     plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, args.output_dir, args.benchmark_type)
     print("Plotting complete.")
