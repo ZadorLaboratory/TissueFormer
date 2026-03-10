@@ -77,6 +77,10 @@ class AttentionCollector:
                 # Extract metadata before sending to model
                 batch_cell_types = batch.pop(self.cell_type_key, None)
 
+                # Extract labels before sending to model (avoid loss computation)
+                batch_labels = batch.pop("labels", None)
+                batch.pop("single_cell_labels", None)
+
                 # Move tensors to device, skip non-tensor items
                 model_inputs = {}
                 for k, v in batch.items():
@@ -91,7 +95,7 @@ class AttentionCollector:
 
                 logits = outputs.logits
                 preds = torch.argmax(logits, dim=-1).cpu().numpy()
-                labels = model_inputs["labels"].cpu().numpy() if "labels" in model_inputs else np.full(len(preds), -1)
+                labels = batch_labels.numpy() if batch_labels is not None else np.full(len(preds), -1)
 
                 # attentions: tuple of (batch_size, group_size, group_size) per layer
                 attn_tuple = outputs.attentions

@@ -17,7 +17,7 @@ from omegaconf import DictConfig, OmegaConf
 from datasets import DatasetDict, load_from_disk, disable_caching
 from transformers import set_seed
 
-from tissueformer.model import TissueFormer
+from tissueformer.model import TissueFormer, TissueFormerConfig
 from tissueformer.samplers import SpatialGroupCollator, SpatialGroupSampler
 from tissueformer.attention_analysis import (
     AttentionCollector,
@@ -55,9 +55,13 @@ def main(cfg: DictConfig) -> None:
     eval_dataset = datasets[split]
     print(f"Using {split} split: {len(eval_dataset)} cells")
 
-    # Load trained model
+    # Load trained model — override num_labels from Hydra config since
+    # older checkpoints may not have saved it correctly
     checkpoint_path = os.path.expanduser(cfg.model_checkpoint_path)
-    model = TissueFormer.from_pretrained(checkpoint_path)
+    model_config = TissueFormerConfig.from_pretrained(checkpoint_path)
+    model_config.num_labels = cfg.model.num_labels
+    model = TissueFormer.from_pretrained(checkpoint_path, config=model_config)
+    model.class_weights = None  # not needed for inference
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     print(f"Loaded model from {checkpoint_path}")
