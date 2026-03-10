@@ -1026,9 +1026,10 @@ class SpatialGroupCollator:
     padding: str = "max_length"
     add_single_cell_labels: bool = True
     index_key: Optional[str] = None
-    relative_positions: bool = False  
+    relative_positions: bool = False
     coordinate_key: str = "CCF_streamlines"
-    absolute_Z: bool = False 
+    absolute_Z: bool = False
+    metadata_keys: Optional[List[str]] = None
     
     def __post_init__(self):
         if self.feature_keys is None:
@@ -1101,6 +1102,12 @@ class SpatialGroupCollator:
                 if self.index_key and self.index_key in item:
                     group_dict["indices"].append(torch.tensor(item[self.index_key]))
 
+            # Collect metadata keys as plain lists (not tensors)
+            if self.metadata_keys:
+                for key in self.metadata_keys:
+                    if key in available_features:
+                        group_dict[key] = [item[key] for item in group]
+
             # Add relative positions
             if self.relative_positions:
                 coordinates = np.array([item[self.coordinate_key] for item in group])
@@ -1134,11 +1141,15 @@ class SpatialGroupCollator:
             return {}
         
         # Combine all groups into final batch
-        batch = {
-            key: torch.stack([group[key] for group in grouped_features])
-            for key in grouped_features[0].keys()
-        }
-        
+        metadata_key_set = set(self.metadata_keys or [])
+        batch = {}
+        for key in grouped_features[0].keys():
+            if key in metadata_key_set:
+                # Metadata: keep as list-of-lists (not tensors)
+                batch[key] = [group[key] for group in grouped_features]
+            else:
+                batch[key] = torch.stack([group[key] for group in grouped_features])
+
         return batch
 
 class GroupedSpatialTrainer(Trainer):
