@@ -8,8 +8,10 @@ Usage:
         model_checkpoint_path=/path/to/model
 """
 
+import glob
 import os
 
+import anndata as ad
 import hydra
 import numpy as np
 import torch
@@ -84,7 +86,7 @@ def main(cfg: DictConfig) -> None:
     # Create spatial sampler for brain data
     sampler = SpatialGroupSampler(
         dataset=eval_dataset,
-        batch_size=cfg.data.group_size,
+        batch_size=512,
         group_size=cfg.data.group_size,
         coordinate_key=cfg.data.coordinate_key,
         seed=42,
@@ -104,12 +106,25 @@ def main(cfg: DictConfig) -> None:
         sampler=sampler,
         cell_type_key=cell_type_key,
         label_names=label_names,
-        batch_size=cfg.data.group_size,
+        batch_size=512,
         max_groups=max_groups,
     )
     print("Collecting attention weights...")
     results = collector.collect()
     print(f"Collected {len(results.attentions)} groups")
+
+    # Build cell type color map from an h5ad file using colormycells
+    color_map = None
+    h5ad_dir = os.path.join(os.path.dirname(__file__), "data", "anndatas")
+    h5ad_files = sorted(glob.glob(os.path.join(h5ad_dir, "*.h5ad")))
+    if h5ad_files:
+        try:
+            from colormycells import get_colormap as get_cell_colormap
+            ref_adata = ad.read_h5ad(h5ad_files[0], backed="r")
+            color_map = get_cell_colormap(ref_adata, key=cell_type_key, plot_colorspace=False)
+            print(f"Loaded cell type colors from {os.path.basename(h5ad_files[0])}")
+        except Exception as e:
+            print(f"Could not generate cell type colormap: {e}")
 
     # Generate figures
     output_dir = cfg.training.output_dir
@@ -134,13 +149,13 @@ def main(cfg: DictConfig) -> None:
     else:
         summary_subset = summary
 
-    fig = plot_attention_per_label(summary_subset, top_k=top_k)
+    fig = plot_attention_per_label(summary_subset, top_k=top_k, color_map=color_map)
     path = os.path.join(output_dir, "attention_per_label.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     print(f"Saved: {path}")
 
     # 3. Overall ranking
-    fig = plot_overall_attention_ranking(summary, top_k=top_k + 5)
+    fig = plot_overall_attention_ranking(summary, top_k=top_k + 5, color_map=color_map)
     path = os.path.join(output_dir, "attention_ranking.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     print(f"Saved: {path}")

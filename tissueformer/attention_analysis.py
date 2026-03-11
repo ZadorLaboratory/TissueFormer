@@ -251,12 +251,26 @@ def plot_single_group_heatmap(
     return fig
 
 
+def _get_bar_colors(cell_types, color_map):
+    """Map cell type names to colors using the provided color_map dict."""
+    if color_map is None:
+        return None
+    return [color_map.get(ct, (0.7, 0.7, 0.7)) for ct in cell_types]
+
+
 def plot_attention_per_label(
     summary_df: pd.DataFrame,
     top_k: int = 15,
     figsize_per_subplot: tuple = (6, 4),
+    color_map: Optional[Dict] = None,
 ) -> plt.Figure:
-    """Horizontal bar chart of top-K cell types per label class."""
+    """Horizontal bar chart of top-K cell types per label class.
+
+    Parameters
+    ----------
+    color_map : dict, optional
+        Mapping of cell type name to color (e.g. from ``colormycells.get_colormap``).
+    """
     labels = sorted(summary_df["label"].unique())
     n_labels = len(labels)
     if n_labels == 0:
@@ -275,12 +289,16 @@ def plot_attention_per_label(
     for idx, label in enumerate(labels):
         ax = axes[idx // ncols][idx % ncols]
         subset = summary_df[summary_df["label"] == label].nlargest(top_k, "mean_attention")
+        cell_types = subset["cell_type"].values[::-1]
+        means = subset["mean_attention"].values[::-1]
         sem_vals = subset["sem"].values[::-1] if "sem" in subset.columns else None
+        colors = _get_bar_colors(cell_types, color_map)
         ax.barh(
-            subset["cell_type"].values[::-1],
-            subset["mean_attention"].values[::-1],
+            cell_types,
+            means,
             xerr=sem_vals,
             capsize=2,
+            color=colors,
         )
         ax.set_title(label, fontsize=10)
         ax.set_xlabel("Mean attention received")
@@ -299,17 +317,25 @@ def plot_overall_attention_ranking(
     summary_df: pd.DataFrame,
     top_k: int = 20,
     figsize: tuple = (8, 6),
+    color_map: Optional[Dict] = None,
 ) -> plt.Figure:
-    """Bar chart of cell types ranked by mean attention across all labels."""
+    """Bar chart of cell types ranked by mean attention across all labels.
+
+    Parameters
+    ----------
+    color_map : dict, optional
+        Mapping of cell type name to color (e.g. from ``colormycells.get_colormap``).
+    """
     grouped = summary_df.groupby("cell_type")["mean_attention"]
     overall_mean = grouped.mean()
     overall_sem = grouped.sem().fillna(0)
     top_types = overall_mean.nlargest(top_k).index
     overall_mean = overall_mean[top_types].sort_values()
     overall_sem = overall_sem[top_types].reindex(overall_mean.index)
+    colors = _get_bar_colors(overall_mean.index, color_map)
 
     fig, ax = plt.subplots(figsize=figsize)
-    ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2)
+    ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2, color=colors)
     ax.set_xlabel("Mean attention received (across all labels)")
     ax.set_title(f"Top {top_k} cell types by attention received")
     ax.tick_params(axis="y", labelsize=8)
