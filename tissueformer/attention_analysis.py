@@ -174,19 +174,21 @@ def cell_type_attention_summary(results: AttentionResults, layer_idx: int = -1) 
     """Summarise mean attention per (label, cell_type) pair.
 
     Returns a DataFrame with columns:
-        [label, cell_type, mean_attention, count]
-    where ``count`` is the number of cells contributing to the mean.
+        [label, cell_type, mean_attention, sem, count]
+    where ``count`` is the number of cells contributing to the mean
+    and ``sem`` is the standard error of the mean.
     """
     df = aggregate_attention_by_cell_type(results, layer_idx=layer_idx)
     if df.empty:
-        return pd.DataFrame(columns=["label", "cell_type", "mean_attention", "count"])
+        return pd.DataFrame(columns=["label", "cell_type", "mean_attention", "sem", "count"])
 
     summary = (
         df.groupby(["label", "cell_type"])["mean_attention_received"]
-        .agg(["mean", "count"])
+        .agg(["mean", "sem", "count"])
         .reset_index()
         .rename(columns={"mean": "mean_attention"})
     )
+    summary["sem"] = summary["sem"].fillna(0)
     return summary.sort_values("mean_attention", ascending=False)
 
 
@@ -273,9 +275,12 @@ def plot_attention_per_label(
     for idx, label in enumerate(labels):
         ax = axes[idx // ncols][idx % ncols]
         subset = summary_df[summary_df["label"] == label].nlargest(top_k, "mean_attention")
+        sem_vals = subset["sem"].values[::-1] if "sem" in subset.columns else None
         ax.barh(
             subset["cell_type"].values[::-1],
             subset["mean_attention"].values[::-1],
+            xerr=sem_vals,
+            capsize=2,
         )
         ax.set_title(label, fontsize=10)
         ax.set_xlabel("Mean attention received")
@@ -296,15 +301,15 @@ def plot_overall_attention_ranking(
     figsize: tuple = (8, 6),
 ) -> plt.Figure:
     """Bar chart of cell types ranked by mean attention across all labels."""
-    overall = (
-        summary_df.groupby("cell_type")["mean_attention"]
-        .mean()
-        .nlargest(top_k)
-        .sort_values()
-    )
+    grouped = summary_df.groupby("cell_type")["mean_attention"]
+    overall_mean = grouped.mean()
+    overall_sem = grouped.sem().fillna(0)
+    top_types = overall_mean.nlargest(top_k).index
+    overall_mean = overall_mean[top_types].sort_values()
+    overall_sem = overall_sem[top_types].reindex(overall_mean.index)
 
     fig, ax = plt.subplots(figsize=figsize)
-    ax.barh(overall.index, overall.values)
+    ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2)
     ax.set_xlabel("Mean attention received (across all labels)")
     ax.set_title(f"Top {top_k} cell types by attention received")
     ax.tick_params(axis="y", labelsize=8)
