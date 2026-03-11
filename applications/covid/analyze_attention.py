@@ -30,7 +30,10 @@ from tissueformer.attention_analysis import (
     plot_abundance_vs_attention,
 )
 
-from .train import prepare_datasets
+try:
+    from .train import prepare_datasets
+except ImportError:
+    from train import prepare_datasets
 
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
