@@ -427,28 +427,37 @@ def plot_abundance_vs_attention(
     """Scatter plot of cell type abundance vs. mean attention received.
 
     Each point is a cell type. X-axis is mean fractional abundance within
-    groups (fraction of cells in a group that are this type). Y-axis is
-    mean per-cell attention received. Points above the diagonal receive
-    more attention than expected from abundance alone.
+    groups (fraction of cells in a group that are this type, including
+    groups where the type is absent as zeros). Y-axis is mean per-cell
+    attention received. A linear regression line and significance test
+    are shown.
 
     Parameters
     ----------
     color_map : dict, optional
         Mapping of cell type name to color.
     """
+    from scipy import stats
+
     df = aggregate_attention_by_cell_type(results, layer_idx=layer_idx)
     if df.empty:
         fig, ax = plt.subplots(figsize=figsize)
         ax.text(0.5, 0.5, "No data", ha="center", va="center")
         return fig
 
-    # For each group, compute fraction of cells that are each type
+    # For each group, compute fraction of cells that are each type.
+    # Include zeros for types absent from a group.
+    all_cell_types = df["cell_type"].unique()
+    all_group_ids = df["group_idx"].unique()
+    n_groups = len(all_group_ids)
+
     group_type_counts = df.groupby(["group_idx", "cell_type"]).size().reset_index(name="n_cells")
     group_totals = df.groupby("group_idx").size().reset_index(name="group_size")
     group_type_counts = group_type_counts.merge(group_totals, on="group_idx")
     group_type_counts["fraction"] = group_type_counts["n_cells"] / group_type_counts["group_size"]
 
-    abundance = group_type_counts.groupby("cell_type")["fraction"].mean()
+    # Sum fractions across groups that contain this type, divide by total groups
+    abundance = group_type_counts.groupby("cell_type")["fraction"].sum() / n_groups
     attention = df.groupby("cell_type")["mean_attention_received"].mean()
 
     ct_df = pd.DataFrame({"abundance": abundance, "attention": attention}).dropna()
@@ -471,13 +480,25 @@ def plot_abundance_vs_attention(
             textcoords="offset points",
         )
 
-    # y=x line: points above get more attention than their abundance would predict
-    lim_max = max(ct_df["abundance"].max(), ct_df["attention"].max()) * 1.1
-    ax.plot([0, lim_max], [0, lim_max], "k--", alpha=0.3, label="proportional")
+    # Linear regression with significance test
+    slope, intercept, r_value, p_value, std_err = stats.linregress(
+        ct_df["abundance"], ct_df["attention"]
+    )
+    x_fit = np.array([ct_df["abundance"].min(), ct_df["abundance"].max()])
+    ax.plot(x_fit, slope * x_fit + intercept, "k-", alpha=0.5)
+
+    sig_str = f"p = {p_value:.2e}" if p_value < 0.001 else f"p = {p_value:.3f}"
+    sig_label = "significant" if p_value < 0.05 else "not significant"
+    box_text = f"slope = {slope:.3f}\nR\u00b2 = {r_value**2:.3f}\n{sig_str} ({sig_label})"
+    ax.text(
+        0.97, 0.03, box_text,
+        transform=ax.transAxes, fontsize=8,
+        verticalalignment="bottom", horizontalalignment="right",
+        bbox=dict(boxstyle="round,pad=0.4", facecolor="wheat", alpha=0.8),
+    )
 
     ax.set_xlabel("Mean fractional abundance in group")
     ax.set_ylabel("Mean attention received per cell")
     ax.set_title("Cell type abundance vs. attention received")
-    ax.legend(fontsize=8)
     fig.tight_layout()
     return fig
