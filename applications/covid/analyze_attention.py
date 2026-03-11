@@ -22,9 +22,11 @@ from tissueformer.samplers import SpatialGroupCollator, DonorGroupSampler
 from tissueformer.attention_analysis import (
     AttentionCollector,
     cell_type_attention_summary,
+    cell_type_total_attention_summary,
     plot_single_group_heatmap,
     plot_attention_per_label,
     plot_overall_attention_ranking,
+    plot_total_attention_ranking,
 )
 
 from train import prepare_datasets
@@ -130,9 +132,16 @@ def main(cfg: DictConfig) -> None:
     fig.savefig(path, dpi=150, bbox_inches="tight")
     print(f"Saved: {path}")
 
-    # 3. Overall ranking
+    # 3. Overall ranking (per-cell mean — upweights rare types)
     fig = plot_overall_attention_ranking(summary, top_k=top_k + 5)
     path = os.path.join(output_dir, "attention_ranking.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    print(f"Saved: {path}")
+
+    # 4. Total attention ranking (abundance-weighted — common types rank higher)
+    total_summary = cell_type_total_attention_summary(results, layer_idx=layer_idx)
+    fig = plot_total_attention_ranking(total_summary, top_k=top_k + 5)
+    path = os.path.join(output_dir, "attention_total_ranking.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     print(f"Saved: {path}")
 

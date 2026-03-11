@@ -192,6 +192,45 @@ def cell_type_attention_summary(results: AttentionResults, layer_idx: int = -1) 
     return summary.sort_values("mean_attention", ascending=False)
 
 
+def cell_type_total_attention_summary(
+    results: AttentionResults, layer_idx: int = -1
+) -> pd.DataFrame:
+    """Total attention captured per cell type, averaged across groups.
+
+    Unlike :func:`cell_type_attention_summary` which averages per-cell
+    attention (upweighting rare types), this sums attention within each
+    group first, then averages across groups.  The result reflects how
+    much of the group's total attention each cell type captures,
+    accounting for its abundance.
+
+    Returns a DataFrame with columns:
+        [label, cell_type, mean_total_attention, sem, n_groups]
+    """
+    df = aggregate_attention_by_cell_type(results, layer_idx=layer_idx)
+    if df.empty:
+        return pd.DataFrame(
+            columns=["label", "cell_type", "mean_total_attention", "sem", "n_groups"]
+        )
+
+    # Sum attention per (group, label, cell_type) — total attention captured
+    group_totals = (
+        df.groupby(["group_idx", "label", "cell_type"])["mean_attention_received"]
+        .sum()
+        .reset_index()
+        .rename(columns={"mean_attention_received": "total_attention"})
+    )
+
+    # Average across groups
+    summary = (
+        group_totals.groupby(["label", "cell_type"])["total_attention"]
+        .agg(["mean", "sem", "count"])
+        .reset_index()
+        .rename(columns={"mean": "mean_total_attention", "count": "n_groups"})
+    )
+    summary["sem"] = summary["sem"].fillna(0)
+    return summary.sort_values("mean_total_attention", ascending=False)
+
+
 # ---------------------------------------------------------------------------
 # Plotting
 # ---------------------------------------------------------------------------
@@ -338,6 +377,42 @@ def plot_overall_attention_ranking(
     ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2, color=colors)
     ax.set_xlabel("Mean attention received (across all labels)")
     ax.set_title(f"Top {top_k} cell types by attention received")
+    ax.tick_params(axis="y", labelsize=8)
+    fig.tight_layout()
+    return fig
+
+
+def plot_total_attention_ranking(
+    total_summary_df: pd.DataFrame,
+    top_k: int = 20,
+    figsize: tuple = (8, 6),
+    color_map: Optional[Dict] = None,
+) -> plt.Figure:
+    """Bar chart of cell types ranked by total attention captured per group.
+
+    This complements :func:`plot_overall_attention_ranking` by showing
+    abundance-weighted attention — common cell types naturally rank higher
+    because they capture more of the group's total attention.
+
+    Parameters
+    ----------
+    total_summary_df : DataFrame
+        Output of :func:`cell_type_total_attention_summary`.
+    color_map : dict, optional
+        Mapping of cell type name to color.
+    """
+    grouped = total_summary_df.groupby("cell_type")["mean_total_attention"]
+    overall_mean = grouped.mean()
+    overall_sem = grouped.sem().fillna(0)
+    top_types = overall_mean.nlargest(top_k).index
+    overall_mean = overall_mean[top_types].sort_values()
+    overall_sem = overall_sem[top_types].reindex(overall_mean.index)
+    colors = _get_bar_colors(overall_mean.index, color_map)
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2, color=colors)
+    ax.set_xlabel("Total attention captured per group (across all labels)")
+    ax.set_title(f"Top {top_k} cell types by total attention (abundance-weighted)")
     ax.tick_params(axis="y", labelsize=8)
     fig.tight_layout()
     return fig
