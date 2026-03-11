@@ -123,37 +123,34 @@ def main(cfg: DictConfig) -> None:
     output_dir = cfg.training.output_dir
     os.makedirs(output_dir, exist_ok=True)
 
+    def save_fig(fig, name):
+        """Save figure as both PNG and PDF."""
+        for ext in ("png", "pdf"):
+            path = os.path.join(output_dir, f"{name}.{ext}")
+            fig.savefig(path, dpi=150, bbox_inches="tight")
+            print(f"Saved: {path}")
+
     # 1. Heatmap for first group
     fig = plot_single_group_heatmap(results, group_idx=0, layer_idx=layer_idx)
-    path = os.path.join(output_dir, "attention_heatmap.png")
-    fig.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"Saved: {path}")
+    save_fig(fig, "attention_heatmap")
 
     # 2. Per-label attention bar charts
     summary = cell_type_attention_summary(results, layer_idx=layer_idx)
     fig = plot_attention_per_label(summary, top_k=top_k)
-    path = os.path.join(output_dir, "attention_per_label.png")
-    fig.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"Saved: {path}")
+    save_fig(fig, "attention_per_label")
 
     # 3. Overall ranking (per-cell mean — upweights rare types)
     fig = plot_overall_attention_ranking(summary, top_k=top_k + 5)
-    path = os.path.join(output_dir, "attention_ranking.png")
-    fig.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"Saved: {path}")
+    save_fig(fig, "attention_ranking")
 
     # 4. Total attention ranking (abundance-weighted — common types rank higher)
     total_summary = cell_type_total_attention_summary(results, layer_idx=layer_idx)
     fig = plot_total_attention_ranking(total_summary, top_k=top_k + 5)
-    path = os.path.join(output_dir, "attention_total_ranking.png")
-    fig.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"Saved: {path}")
+    save_fig(fig, "attention_total_ranking")
 
     # 5. Abundance vs. attention scatter
     fig = plot_abundance_vs_attention(results, layer_idx=layer_idx)
-    path = os.path.join(output_dir, "abundance_vs_attention.png")
-    fig.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"Saved: {path}")
+    save_fig(fig, "abundance_vs_attention")
 
     # Save summary CSV
     csv_path = os.path.join(output_dir, "attention_summary.csv")
