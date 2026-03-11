@@ -27,6 +27,7 @@ from tissueformer.attention_analysis import (
     plot_attention_per_label,
     plot_overall_attention_ranking,
     plot_total_attention_ranking,
+    plot_abundance_vs_attention,
 )
 
 from train import prepare_datasets
@@ -142,6 +143,12 @@ def main(cfg: DictConfig) -> None:
     total_summary = cell_type_total_attention_summary(results, layer_idx=layer_idx)
     fig = plot_total_attention_ranking(total_summary, top_k=top_k + 5)
     path = os.path.join(output_dir, "attention_total_ranking.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    print(f"Saved: {path}")
+
+    # 5. Abundance vs. attention scatter
+    fig = plot_abundance_vs_attention(results, layer_idx=layer_idx)
+    path = os.path.join(output_dir, "abundance_vs_attention.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     print(f"Saved: {path}")
 

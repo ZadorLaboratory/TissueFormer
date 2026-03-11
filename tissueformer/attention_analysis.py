@@ -416,3 +416,68 @@ def plot_total_attention_ranking(
     ax.tick_params(axis="y", labelsize=8)
     fig.tight_layout()
     return fig
+
+
+def plot_abundance_vs_attention(
+    results: AttentionResults,
+    layer_idx: int = -1,
+    figsize: tuple = (8, 7),
+    color_map: Optional[Dict] = None,
+) -> plt.Figure:
+    """Scatter plot of cell type abundance vs. mean attention received.
+
+    Each point is a cell type. X-axis is mean fractional abundance within
+    groups (fraction of cells in a group that are this type). Y-axis is
+    mean per-cell attention received. Points above the diagonal receive
+    more attention than expected from abundance alone.
+
+    Parameters
+    ----------
+    color_map : dict, optional
+        Mapping of cell type name to color.
+    """
+    df = aggregate_attention_by_cell_type(results, layer_idx=layer_idx)
+    if df.empty:
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.text(0.5, 0.5, "No data", ha="center", va="center")
+        return fig
+
+    # For each group, compute fraction of cells that are each type
+    group_type_counts = df.groupby(["group_idx", "cell_type"]).size().reset_index(name="n_cells")
+    group_totals = df.groupby("group_idx").size().reset_index(name="group_size")
+    group_type_counts = group_type_counts.merge(group_totals, on="group_idx")
+    group_type_counts["fraction"] = group_type_counts["n_cells"] / group_type_counts["group_size"]
+
+    abundance = group_type_counts.groupby("cell_type")["fraction"].mean()
+    attention = df.groupby("cell_type")["mean_attention_received"].mean()
+
+    ct_df = pd.DataFrame({"abundance": abundance, "attention": attention}).dropna()
+
+    colors = None
+    if color_map is not None:
+        colors = [color_map.get(ct, (0.7, 0.7, 0.7)) for ct in ct_df.index]
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.scatter(ct_df["abundance"], ct_df["attention"], c=colors, s=60, edgecolors="k", linewidths=0.5, alpha=0.85)
+
+    # Label each point
+    for ct in ct_df.index:
+        ax.annotate(
+            ct,
+            (ct_df.loc[ct, "abundance"], ct_df.loc[ct, "attention"]),
+            fontsize=6,
+            alpha=0.8,
+            xytext=(4, 4),
+            textcoords="offset points",
+        )
+
+    # y=x line: points above get more attention than their abundance would predict
+    lim_max = max(ct_df["abundance"].max(), ct_df["attention"].max()) * 1.1
+    ax.plot([0, lim_max], [0, lim_max], "k--", alpha=0.3, label="proportional")
+
+    ax.set_xlabel("Mean fractional abundance in group")
+    ax.set_ylabel("Mean attention received per cell")
+    ax.set_title("Cell type abundance vs. attention received")
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    return fig
