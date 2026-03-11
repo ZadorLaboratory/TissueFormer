@@ -179,7 +179,7 @@ def main():
         )
         # Overlay CCF boundaries
         for k, boundary_coords in bf_left_boundaries_flat.items():
-            ax.plot(*boundary_coords.T, c="k", lw=0.5)
+            ax.plot(*boundary_coords.T, c="w", lw=0.25)
         ax.set_title(f"{animal} enucleated SVC boundaries (acc={acc:.3f})")
         svc_path = os.path.join(OUTPUT_DIR, f"{animal}_svc_enucleated.png")
         fig.savefig(svc_path, dpi=200, bbox_inches="tight")
