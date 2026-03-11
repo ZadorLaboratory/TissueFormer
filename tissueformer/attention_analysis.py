@@ -299,8 +299,8 @@ def _get_bar_colors(cell_types, color_map):
 
 def plot_attention_per_label(
     summary_df: pd.DataFrame,
-    top_k: int = 15,
-    figsize_per_subplot: tuple = (6, 4),
+    top_k: int = 5,
+    figsize_per_subplot: tuple = (5, 2.2),
     color_map: Optional[Dict] = None,
 ) -> plt.Figure:
     """Horizontal bar chart of top-K cell types per label class.
@@ -322,6 +322,7 @@ def plot_attention_per_label(
     fig, axes = plt.subplots(
         nrows, ncols,
         figsize=(figsize_per_subplot[0] * ncols, figsize_per_subplot[1] * nrows),
+        sharex=True,
         squeeze=False,
     )
 
@@ -339,15 +340,20 @@ def plot_attention_per_label(
             capsize=2,
             color=colors,
         )
-        ax.set_title(label, fontsize=10)
-        ax.set_xlabel("Mean attention received")
-        ax.tick_params(axis="y", labelsize=7)
+        ax.set_title(label, fontsize=11, fontweight="bold")
+        ax.tick_params(axis="y", labelsize=9)
+        ax.tick_params(axis="x", labelsize=9)
+
+    # Only bottom row gets x-axis labels
+    for col in range(ncols):
+        axes[-1][col].set_xlabel("Mean attention received", fontsize=10)
 
     # Hide unused axes
     for idx in range(n_labels, nrows * ncols):
         axes[idx // ncols][idx % ncols].set_visible(False)
 
-    fig.suptitle("Top cell types by attention received (per label)", fontsize=13)
+    fig.supylabel(f"Top {top_k} cell types by attention", fontsize=11)
+    fig.suptitle("Attention received per label", fontsize=13, fontweight="bold")
     fig.tight_layout()
     return fig
 
