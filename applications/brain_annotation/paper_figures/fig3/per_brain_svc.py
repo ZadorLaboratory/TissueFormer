@@ -20,6 +20,7 @@ from utils import reflect_points_to_left
 
 from svc_plotting import (
     create_decision_boundary_plot_with_density_mask,
+    create_master_colormap,
     load_ccf_boundaries,
     plot_scatter_style,
     SuppressOutput,
@@ -50,9 +51,21 @@ PLOT_PARAMS = dict(
 )
 
 
+CONTROL_ANIMALS = [
+    "filt_neurons_D076_1L_CCFv2_newtypes.h5ad",
+    "filt_neurons_D077_1L_CCFv2_newtypes.h5ad",
+    "filt_neurons_D078_1L_CCFv2_newtypes.h5ad",
+    "filt_neurons_D079_3L_CCFv2_newtypes.h5ad",
+]
+
+
 def build_colormap():
-    """Build a colormap from area class IDs to colors, using the area mapping files."""
+    """Build colormap using anndata files + create_master_colormap, matching the notebook."""
+    import anndata as ad
+
     files_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "files")
+    ann_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "anndatas")
+
     with open(os.path.join(files_dir, "area_ancestor_id_map.json")) as f:
         area_ancestor_id_map = json.load(f)
     with open(os.path.join(files_dir, "area_name_map.json")) as f:
@@ -67,20 +80,22 @@ def build_colormap():
     unique_areas = np.unique(list(annotation2area_int.values()))
     area_classes = np.arange(len(unique_areas))
     id2id = {float(k): v for k, v in zip(unique_areas, area_classes)}
+    annoation2area_class = {k: id2id[int(v)] for k, v in annotation2area_int.items()}
     id2id_rev = {v: k for k, v in id2id.items()}
     area_class2area_name = {k: area_name_map[str(int(v))] for k, v in id2id_rev.items()}
 
-    # Create deterministic colormap from area names
-    all_names = sorted(set(area_class2area_name.values()))
-    colormaps = ["tab20", "tab20b", "tab20c"]
-    colors = np.vstack([plt.cm.get_cmap(cmap)(np.linspace(0, 1, 20)) for cmap in colormaps])
-    color_indices = np.arange(len(all_names)) % len(colors)
-    name2color = dict(zip(all_names, colors[color_indices]))
+    # Load anndata files and add area labels (same as notebook)
+    adata_list = []
+    for animal in CONTROL_ANIMALS:
+        adata = ad.read_h5ad(os.path.join(ann_dir, animal))
+        adata.obs["area_label"] = adata.obs["CCFano"].map(annoation2area_class).astype("category")
+        adata.obs["area_name"] = adata.obs["area_label"].map(area_class2area_name).astype("category")
+        adata = adata[adata.obs["area_name"] != "outside_brain"]
+        subcortical_mask = np.isnan(adata.obsm["CCF_streamlines"]).any(axis=1)
+        adata = adata[~subcortical_mask]
+        adata_list.append(adata)
 
-    # Map from area class ID -> color
-    name2class = {v: k for k, v in area_class2area_name.items()}
-    color_map = {name2class[name]: name2color[name] for name in all_names if name in name2class}
-
+    color_map, label_names = create_master_colormap(adata_list, area_class2area_name)
     return color_map, area_class2area_name
 
 
@@ -105,6 +120,16 @@ def main():
 
     color_map, area_class2area_name = build_colormap()
     bf_left_boundaries_flat = load_ccf_boundaries()
+
+    # Ensure all class IDs in predictions/labels have a color entry
+    all_ids = set(predictions) | set(labels)
+    colormaps = ["tab20", "tab20b", "tab20c"]
+    fallback_colors = np.vstack(
+        [plt.colormaps.get_cmap(cmap)(np.linspace(0, 1, 20)) for cmap in colormaps]
+    )
+    for cls_id in all_ids:
+        if cls_id not in color_map:
+            color_map[cls_id] = fallback_colors[int(cls_id) % len(fallback_colors)]
 
     for animal in ENUCLEATED_ANIMALS:
         print(f"\n{'='*60}")
