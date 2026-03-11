@@ -71,15 +71,16 @@ def build_colormap():
     with open(os.path.join(files_dir, "area_name_map.json")) as f:
         area_name_map = json.load(f)
 
-    area_name_map["0"] = "outside_brain"
+    # Exactly match notebook cell-4 of line_drawing_experiments.ipynb
+    area_name_map['0'] = 'outside_brain'
     annotation2area_int = {0.0: 0}
-    for a in area_ancestor_id_map:
-        higher = area_ancestor_id_map[str(int(a))]
-        annotation2area_int[float(a)] = higher[1] if len(higher) > 1 else int(a)
+    for a in area_ancestor_id_map.keys():
+        higher_area_id = area_ancestor_id_map[str(int(a))][1] if len(area_ancestor_id_map[str(int(a))]) > 1 else a
+        annotation2area_int[float(a)] = higher_area_id
 
     unique_areas = np.unique(list(annotation2area_int.values()))
     area_classes = np.arange(len(unique_areas))
-    id2id = {float(k): v for k, v in zip(unique_areas, area_classes)}
+    id2id = {float(k): v for (k, v) in zip(unique_areas, area_classes)}
     annoation2area_class = {k: id2id[int(v)] for k, v in annotation2area_int.items()}
     id2id_rev = {v: k for k, v in id2id.items()}
     area_class2area_name = {k: area_name_map[str(int(v))] for k, v in id2id_rev.items()}
@@ -88,10 +89,11 @@ def build_colormap():
     adata_list = []
     for animal in CONTROL_ANIMALS:
         adata = ad.read_h5ad(os.path.join(ann_dir, animal))
-        adata.obs["area_label"] = adata.obs["CCFano"].map(annoation2area_class).astype("category")
-        adata.obs["area_name"] = adata.obs["area_label"].map(area_class2area_name).astype("category")
-        adata = adata[adata.obs["area_name"] != "outside_brain"]
-        subcortical_mask = np.isnan(adata.obsm["CCF_streamlines"]).any(axis=1)
+        adata.obs['CCFano'] = adata.obs['CCFano'].astype('category')
+        adata.obs['area_label'] = adata.obs['CCFano'].map(annoation2area_class).astype('category')
+        adata.obs['area_name'] = adata.obs['area_label'].map(area_class2area_name).astype('category')
+        adata = adata[adata.obs['area_name'] != 'outside_brain']
+        subcortical_mask = np.isnan(adata.obsm['CCF_streamlines']).any(axis=1)
         adata = adata[~subcortical_mask]
         adata_list.append(adata)
 
