@@ -18,7 +18,7 @@ import pandas as pd
 from joblib import load as joblib_load
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from utils import reflect_points_to_left
+from utils import reflect_points_to_left, compute_flatmap_pixel_area_map, interpolate_pixel_area_to_grid
 from svc_plotting import SuppressOutput
 
 ROOT_DATA_PATH = os.environ["ROOT_DATA_PATH"]
@@ -138,15 +138,17 @@ def compute_shared_grid(all_brains):
     xx0, xx1 = np.meshgrid(xx, yy)
     X_grid = np.column_stack([xx0.ravel(), xx1.ravel()]).astype(np.float32)
 
-    dx = (x_max - x_min) / GRID_RESOLUTION
-    dy = (y_max - y_min) / GRID_RESOLUTION
-    pixel_area = dx * dy
-
-    return X_grid, pixel_area, (x_min, x_max, y_min, y_max)
+    return X_grid, xx0, xx1, (x_min, x_max, y_min, y_max)
 
 
-def compute_visp_areas(all_brains, X_grid, pixel_area):
-    """Predict on shared grid and count VISp pixels for each brain."""
+def compute_visp_areas(all_brains, X_grid, pixel_area_per_point):
+    """Predict on shared grid and compute VISp physical area for each brain.
+
+    Parameters
+    ----------
+    pixel_area_per_point : np.ndarray
+        Physical area (mm²) per grid point, flattened to match X_grid rows.
+    """
     results = []
     for name, info in all_brains.items():
         model = info["model"]
@@ -157,19 +159,20 @@ def compute_visp_areas(all_brains, X_grid, pixel_area):
             preds = preds.get()
         preds = np.asarray(preds)
 
-        visp_count = (preds == VISP_LABEL).sum()
+        visp_mask = preds == VISP_LABEL
+        visp_count = visp_mask.sum()
         total_count = len(preds)
-        visp_area = visp_count * pixel_area
+        visp_area_mm2 = pixel_area_per_point[visp_mask].sum()
 
         results.append({
             "brain": name,
             "condition": info["condition"],
             "visp_pixels": int(visp_count),
             "total_pixels": int(total_count),
-            "visp_area": visp_area,
+            "visp_area": visp_area_mm2,
             "visp_fraction": visp_count / total_count,
         })
-        print(f"    {name}: VISp pixels={visp_count}, area={visp_area:.2f}")
+        print(f"    {name}: VISp pixels={visp_count}, area={visp_area_mm2:.4f} mm²")
 
     return pd.DataFrame(results)
 
@@ -226,7 +229,7 @@ def plot_visp_comparison(df):
 
     ax.set_xticks([0, 1])
     ax.set_xticklabels(["Control", "Enucleated"])
-    ax.set_ylabel("VISp area (grid units\u00b2)")
+    ax.set_ylabel("VISp area (mm²)")
     ax.set_xlim(-0.5, 1.5)
     ax.set_ylim(0, y_max * 1.25)
     ax.spines["top"].set_visible(False)
@@ -252,12 +255,24 @@ def main():
     all_brains = {**control_brains, **enucleated_brains}
 
     print("Computing shared grid...")
-    X_grid, pixel_area, bounds = compute_shared_grid(all_brains)
-    print(f"  Grid: {GRID_RESOLUTION}x{GRID_RESOLUTION}, pixel area={pixel_area:.4f}")
-    print(f"  Bounds: x=[{bounds[0]:.1f}, {bounds[1]:.1f}], y=[{bounds[2]:.1f}, {bounds[3]:.1f}]")
+    X_grid, xx0, xx1, bounds = compute_shared_grid(all_brains)
+    x_min, x_max, y_min, y_max = bounds
+    svc_dx = (x_max - x_min) / GRID_RESOLUTION
+    svc_dy = (y_max - y_min) / GRID_RESOLUTION
+    print(f"  Grid: {GRID_RESOLUTION}x{GRID_RESOLUTION}, SVC pixel={svc_dx:.4f}x{svc_dy:.4f} flatmap px")
+    print(f"  Bounds: x=[{x_min:.1f}, {x_max:.1f}], y=[{y_min:.1f}, {y_max:.1f}]")
+
+    print("Computing flatmap pixel area map...")
+    flatmap_h5 = os.path.join(ROOT_DATA_PATH, "CCF_files", "flatmap_butterfly.h5")
+    pixel_area_map = compute_flatmap_pixel_area_map(flatmap_h5)
+    # Interpolate to SVC grid: µm² density per native pixel at each grid point
+    area_density = interpolate_pixel_area_to_grid(pixel_area_map, xx0, xx1)
+    # Scale by SVC pixel area (in native-pixel units) and convert µm² -> mm²
+    pixel_area_per_point = (area_density * svc_dx * svc_dy) / 1e6  # mm² per grid point
+    print(f"  Mean pixel area: {np.nanmean(pixel_area_per_point[pixel_area_per_point > 0]):.6f} mm²")
 
     print("Computing VISp areas...")
-    df = compute_visp_areas(all_brains, X_grid, pixel_area)
+    df = compute_visp_areas(all_brains, X_grid, pixel_area_per_point.ravel())
 
     # Print results table
     print("\n" + "=" * 70)
@@ -267,8 +282,8 @@ def main():
     # Summary stats
     ctrl = df[df["condition"] == "control"]["visp_area"]
     enuc = df[df["condition"] == "enucleated"]["visp_area"]
-    print(f"\nControl mean VISp area:     {ctrl.mean():.2f} ± {ctrl.std():.2f}")
-    print(f"Enucleated mean VISp area:  {enuc.mean():.2f} ± {enuc.std():.2f}")
+    print(f"\nControl mean VISp area:     {ctrl.mean():.4f} ± {ctrl.std():.4f} mm²")
+    print(f"Enucleated mean VISp area:  {enuc.mean():.4f} ± {enuc.std():.4f} mm²")
     if ctrl.mean() > 0:
         print(f"Ratio (enucleated/control): {enuc.mean() / ctrl.mean():.3f}")
 
