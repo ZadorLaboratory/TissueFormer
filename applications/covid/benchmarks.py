@@ -34,6 +34,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import (
     accuracy_score,
+    balanced_accuracy_score,
     f1_score,
     roc_auc_score,
     classification_report,
@@ -291,8 +292,11 @@ def evaluate_predictions(labels, predictions, probs, label_names, prefix):
     f1_macro = f1_score(labels, predictions, average="macro", zero_division=0)
     f1_weighted = f1_score(labels, predictions, average="weighted", zero_division=0)
 
+    bal_acc = balanced_accuracy_score(labels, predictions)
+
     metrics = {
         f"{prefix}_accuracy": acc,
+        f"{prefix}_balanced_accuracy": bal_acc,
         f"{prefix}_f1_macro": f1_macro,
         f"{prefix}_f1_weighted": f1_weighted,
     }
