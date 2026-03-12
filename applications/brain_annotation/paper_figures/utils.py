@@ -1,6 +1,7 @@
 from typing import Literal
 from scipy.sparse import csr_matrix
 from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import uniform_filter
 import numpy as np
 import anndata as ad
 import h5py
@@ -38,7 +39,7 @@ def reflect_points_to_left(coords: np.ndarray) -> np.ndarray:
     return reflected
 
 
-def compute_flatmap_pixel_area_map(flatmap_h5_path: str) -> np.ndarray:
+def compute_flatmap_pixel_area_map(flatmap_h5_path: str, smooth_kernel: int = 31) -> np.ndarray:
     """Compute physical area (µm²) per flatmap pixel using the 3D↔2D mapping.
 
     Each flatmap pixel maps to a 3D CCF coordinate. We estimate the physical
@@ -46,15 +47,20 @@ def compute_flatmap_pixel_area_map(flatmap_h5_path: str) -> np.ndarray:
     tangent vectors in the row and column directions, which gives the area of
     the parallelogram spanned by one pixel step in each direction.
 
+    The raw Jacobian is noisy because 3D coordinates are integer voxel indices,
+    so we smooth with a uniform (box) filter. This preserves total area.
+
     Parameters
     ----------
     flatmap_h5_path : str
         Path to ``flatmap_butterfly.h5``.
+    smooth_kernel : int
+        Side length of the uniform smoothing kernel. Set to 1 for no smoothing.
 
     Returns
     -------
     np.ndarray
-        (H, W) array of µm² per pixel, NaN where unmapped or discontinuous.
+        (H, W) array of µm² per pixel, NaN where unmapped.
     """
     # Constants from ccf_streamlines projection (not stored in the HDF5 file)
     view_size = (1360, 1360)  # butterfly flatmap dimensions
@@ -107,6 +113,14 @@ def compute_flatmap_pixel_area_map(flatmap_h5_path: str) -> np.ndarray:
     # Pad to full (H, W) with NaN on right and bottom edges
     area_um2 = np.full(view_size, np.nan, dtype=np.float64)
     area_um2[:-1, :-1] = area_um2_inner
+
+    # Smooth the noisy Jacobian with a NaN-aware uniform filter
+    if smooth_kernel > 1:
+        valid = ~np.isnan(area_um2)
+        filled = np.nan_to_num(area_um2, nan=0.0)
+        num = uniform_filter(filled, size=smooth_kernel)
+        den = uniform_filter(valid.astype(np.float64), size=smooth_kernel)
+        area_um2 = np.where(den > 0.1, num / den, np.nan)
 
     return area_um2
 
