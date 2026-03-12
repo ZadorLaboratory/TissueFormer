@@ -117,7 +117,7 @@ def _get_benchmark_methods(benchmark_type):
         raise ValueError(f"Unknown benchmark_type: {benchmark_type!r}. Use 'classical' or 'dl'.")
 
 
-def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type="classical"):
+def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type="classical", sharex=True):
     """
     Main figure: group accuracy, donor accuracy, and donor AUROC vs group_size.
     One column per dataset, one row per metric.
@@ -126,7 +126,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
     n_rows = len(METRIC_ROWS)
     fig, axes = plt.subplots(n_rows, len(DATASETS),
                              figsize=(4 * len(DATASETS), 3 * n_rows),
-                             sharex=True, squeeze=False)
+                             sharex=sharex, squeeze=False)
 
     for col, dataset in enumerate(DATASETS):
         # --- TissueFormer ---
@@ -262,6 +262,8 @@ def main():
     parser.add_argument("--benchmark_type", type=str, default="classical",
                         choices=["classical", "dl"],
                         help="Which benchmarks to plot: 'classical' (RF/LR) or 'dl' (CellCnn/scAGG/ScRAT)")
+    parser.add_argument("--no-sharex", action="store_true",
+                        help="Disable shared x-axis across subplot rows")
     args = parser.parse_args()
 
     print(f"Fetching runs from {args.entity}/{args.project}...")
@@ -276,7 +278,8 @@ def main():
     tf_df = tf_df[tf_df["tags"].apply(lambda t: "with_val" in t if isinstance(t, list) else False)]
     print(f"  TissueFormer runs: {len(tf_df)} (filtered by 'with_val' tag), Benchmark runs: {len(bench_df)}")
 
-    plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, args.output_dir, args.benchmark_type)
+    plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, args.output_dir, args.benchmark_type,
+                                     sharex=not args.no_sharex)
     print("Plotting complete.")
 
 
