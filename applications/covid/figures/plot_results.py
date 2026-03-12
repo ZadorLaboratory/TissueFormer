@@ -157,7 +157,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                 axes[row, col].errorbar(
                     [ALL_X_POS], [all_mean], yerr=[all_std],
                     color=style["color"], marker=style["marker"],
-                    capsize=3, linewidth=0, markersize=5,
+                    capsize=3, linestyle="none", markersize=5,
                 )
 
         # --- Benchmarks ---
@@ -196,7 +196,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                             [ALL_X_POS], [values.mean()],
                             yerr=[values.std() if len(values) > 1 else 0],
                             color=style["color"], marker=style["marker"],
-                            capsize=3, linewidth=0, markersize=5,
+                            capsize=3, linestyle="none", markersize=5,
                         )
 
         # Formatting
