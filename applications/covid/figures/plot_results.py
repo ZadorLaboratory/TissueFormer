@@ -62,8 +62,6 @@ METHODS = {**TISSUEFORMER, **CLASSICAL_METHODS, **DL_METHODS}
 METRIC_ROWS = [
     ("Group Accuracy", "test/group_accuracy", "group_accuracy"),
     ("Donor Accuracy\n(majority vote)", "test/donor_majority_accuracy", "donor_majority_accuracy"),
-    ("Donor Accuracy\n(mean logits)", "test/donor_meanlogits_accuracy", "donor_meanprobs_accuracy"),
-    # ("Donor AUROC\n(mean logits)", "test/donor_meanlogits_auroc", "donor_meanprobs_auroc"),
 ]
 
 
