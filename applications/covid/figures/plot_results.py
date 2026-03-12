@@ -37,7 +37,16 @@ DATASET_LABELS = {"combat": "COMBAT", "ren": "Ren et al.", "stevenson": "Stevens
 GROUP_SIZES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
 ALL_X_POS = 2048  # x-position for the disconnected "all" point (2 log2-steps past 512)
 N_CLASSES = 3  # control, mild, severe
-CHANCE = 1.0 / N_CLASSES
+
+# Majority-class fraction per dataset (donor-level), used as chance for accuracy metrics.
+# For balanced accuracy, chance is always 1/N_CLASSES regardless of imbalance.
+MAJORITY_CLASS_CHANCE = {
+    "combat": 46 / 85,      # severe: 46, mild: 29, control: 10
+    "ren": 83 / 185,         # severe: 83, mild: 77, control: 25
+    "stevenson": 55 / 106,   # mild: 55, severe: 28, control: 23
+    "combined": 161 / 376,   # mild: 161, severe: 157, control: 58
+}
+BALANCED_CHANCE = 1.0 / N_CLASSES
 
 # Method display config: maps method key -> plotting style
 # Classical methods use {clf}_{feat} keys; DL methods use model name directly
@@ -59,13 +68,14 @@ TISSUEFORMER = {"tissueformer": {"color": "#2196F3", "marker": "o", "label": "Ti
 # Combined dict for backward compatibility (used by plot_diagnostics)
 METHODS = {**TISSUEFORMER, **CLASSICAL_METHODS, **DL_METHODS}
 
-# Metric rows: (display_label, tissueformer_key, benchmark_suffix)
+# Metric rows: (display_label, tissueformer_key, benchmark_suffix, is_balanced)
 # Benchmark metrics are logged as {method}_gs{N}_{suffix}
+# is_balanced: True → chance = 1/N_CLASSES; False → chance = majority class fraction
 METRIC_ROWS = [
-    ("Group Accuracy", "test/group_accuracy", "group_accuracy"),
-    ("Group Balanced\nAccuracy", "test/balanced_accuracy", "group_balanced_accuracy"),
-    ("Donor Accuracy\n(majority vote)", "test/donor_majority_accuracy", "donor_majority_accuracy"),
-    ("Donor Balanced Acc.\n(majority vote)", "test/donor_majority_balanced_accuracy", "donor_majority_balanced_accuracy"),
+    ("Group Accuracy", "test/group_accuracy", "group_accuracy", False),
+    ("Group Balanced\nAccuracy", "test/balanced_accuracy", "group_balanced_accuracy", True),
+    ("Donor Accuracy\n(majority vote)", "test/donor_majority_accuracy", "donor_majority_accuracy", False),
+    ("Donor Balanced Acc.\n(majority vote)", "test/donor_majority_balanced_accuracy", "donor_majority_balanced_accuracy", True),
 ]
 
 
@@ -128,7 +138,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    for row_label, tf_key, bench_suffix in METRIC_ROWS:
+    for row_label, tf_key, bench_suffix, is_balanced in METRIC_ROWS:
         fig, axes = plt.subplots(1, len(DATASETS),
                                  figsize=(4 * len(DATASETS), 3),
                                  sharex=sharex, sharey=sharey, squeeze=False)
@@ -136,8 +146,9 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
         for col, dataset in enumerate(DATASETS):
             ax = axes[0, col]
 
-            # Chance line
-            ax.axhline(CHANCE, color="grey", linestyle=":", linewidth=0.8, label="Chance" if col == 0 else None)
+            # Chance line (1/N for balanced accuracy, majority-class fraction for accuracy)
+            chance = BALANCED_CHANCE if is_balanced else MAJORITY_CLASS_CHANCE[dataset]
+            ax.axhline(chance, color="grey", linestyle=":", linewidth=0.8, label="Chance" if col == 0 else None)
 
             # --- TissueFormer ---
             tf_ds = tf_df[tf_df["dataset_name"] == dataset]
