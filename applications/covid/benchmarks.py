@@ -516,7 +516,7 @@ def run_dl_benchmark(
     from tissueformer.benchmark_models.data import (
         MILDataset, CroppedMILDataset, mil_collate_fn,
         load_covid_mil_data, preprocess_zscore, preprocess_cp10k_log1p,
-        select_hvgs,
+        select_hvgs, fit_zscore_params,
     )
     from tissueformer.benchmark_models.cellcnn import CellCnn
     from tissueformer.benchmark_models.scagg import ScAGG
@@ -568,15 +568,13 @@ def run_dl_benchmark(
     train_idx = actual_train_idx
     print(f"  Donor split: {len(train_idx)} train, {len(val_idx)} val, {len(test_idx)} test")
 
-    # Apply preprocessing
+    # Apply preprocessing (sparse-aware to avoid OOM on large datasets)
     preprocess = model_cfg.get("preprocess", "raw")
-    scaler = None
+    zscore_mean, zscore_scale = None, None
     if preprocess == "zscore":
-        # Fit scaler on train cells only
+        # Compute z-score params from train cells; applied lazily in Dataset
         train_cell_idx = np.concatenate([sample_indices[i] for i in train_idx])
-        scaler = StandardScaler()
-        scaler.fit(X[train_cell_idx])
-        X, _ = preprocess_zscore(X, scaler)
+        zscore_mean, zscore_scale = fit_zscore_params(X, train_cell_idx)
     elif preprocess == "cp10k_log1p":
         X = preprocess_cp10k_log1p(X)
         n_hvgs = model_cfg.get("n_hvgs", None)
@@ -605,22 +603,28 @@ def run_dl_benchmark(
     # to get multiple crops per donor for aggregation
     use_cropped_test = group_size is not None
 
+    # Common kwargs for lazy z-score normalization
+    zs_kwargs = dict(zscore_mean=zscore_mean, zscore_scale=zscore_scale)
+
     if model_name == "scrat":
         cells_per_crop = model_cfg.cells_per_crop
         train_ds = CroppedMILDataset(
             X, make_indices(train_idx), make_labels(train_idx),
             cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_train,
+            **zs_kwargs,
         )
         val_ds = CroppedMILDataset(
             X, make_indices(val_idx), make_labels(val_idx),
             cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_test,
+            **zs_kwargs,
         )
         test_ds = CroppedMILDataset(
             X, make_indices(test_idx), make_labels(test_idx),
             cells_per_crop=cells_per_crop,
             crops_per_sample=model_cfg.crops_per_patient_test,
+            **zs_kwargs,
         )
         test_crops_per = model_cfg.crops_per_patient_test
         val_crops_per = model_cfg.crops_per_patient_test
@@ -629,6 +633,7 @@ def run_dl_benchmark(
         train_ds = MILDataset(
             X, make_indices(train_idx), make_labels(train_idx),
             cells_per_sample=cells_per_input,
+            **zs_kwargs,
         )
         if use_cropped_test:
             # Use max crops across donors for uniform CroppedMILDataset
@@ -638,6 +643,7 @@ def run_dl_benchmark(
                 X, make_indices(val_idx), make_labels(val_idx),
                 cells_per_crop=cells_per_input,
                 crops_per_sample=val_crops_per,
+                **zs_kwargs,
             )
             test_crops_list = compute_crops_per_donor(test_idx)
             test_crops_per = max(test_crops_list)
@@ -645,15 +651,18 @@ def run_dl_benchmark(
                 X, make_indices(test_idx), make_labels(test_idx),
                 cells_per_crop=cells_per_input,
                 crops_per_sample=test_crops_per,
+                **zs_kwargs,
             )
         else:
             val_ds = MILDataset(
                 X, make_indices(val_idx), make_labels(val_idx),
                 cells_per_sample=cells_per_input,
+                **zs_kwargs,
             )
             test_ds = MILDataset(
                 X, make_indices(test_idx), make_labels(test_idx),
                 cells_per_sample=cells_per_input,
+                **zs_kwargs,
             )
             test_crops_per = 1
             val_crops_per = 1
@@ -663,6 +672,7 @@ def run_dl_benchmark(
         train_ds = MILDataset(
             X, make_indices(train_idx), make_labels(train_idx),
             cells_per_sample=cells_per,
+            **zs_kwargs,
         )
         if use_cropped_test:
             val_crops_list = compute_crops_per_donor(val_idx)
@@ -671,6 +681,7 @@ def run_dl_benchmark(
                 X, make_indices(val_idx), make_labels(val_idx),
                 cells_per_crop=cells_per if cells_per else 5000,
                 crops_per_sample=val_crops_per,
+                **zs_kwargs,
             )
             test_crops_list = compute_crops_per_donor(test_idx)
             test_crops_per = max(test_crops_list)
@@ -678,15 +689,18 @@ def run_dl_benchmark(
                 X, make_indices(test_idx), make_labels(test_idx),
                 cells_per_crop=cells_per if cells_per else 5000,
                 crops_per_sample=test_crops_per,
+                **zs_kwargs,
             )
         else:
             val_ds = MILDataset(
                 X, make_indices(val_idx), make_labels(val_idx),
                 cells_per_sample=cells_per,
+                **zs_kwargs,
             )
             test_ds = MILDataset(
                 X, make_indices(test_idx), make_labels(test_idx),
                 cells_per_sample=cells_per,
+                **zs_kwargs,
             )
             test_crops_per = 1
             val_crops_per = 1
