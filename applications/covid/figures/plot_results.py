@@ -35,7 +35,7 @@ plt.rcParams.update({
 DATASETS = ["combat", "ren", "stevenson", "combined"]
 DATASET_LABELS = {"combat": "COMBAT", "ren": "Ren et al.", "stevenson": "Stevenson et al.", "combined": "Combined"}
 GROUP_SIZES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
-ALL_X_POS = 2048  # x-position for the disconnected "all" point (2 log2-steps past 512)
+ALL_X_POS = 2048  # x-position for the disconnected "all donor cells" point (2 log2-steps past 512)
 N_CLASSES = 3  # control, mild, severe
 
 # Majority-class fraction per dataset (donor-level), used as chance for accuracy metrics.
@@ -72,8 +72,8 @@ METHODS = {**TISSUEFORMER, **CLASSICAL_METHODS, **DL_METHODS}
 # Benchmark metrics are logged as {method}_gs{N}_{suffix}
 # is_balanced: True → chance = 1/N_CLASSES; False → chance = majority class fraction
 METRIC_ROWS = [
-    ("Group Accuracy", "test/group_accuracy", "group_accuracy", False),
-    ("Group Balanced\nAccuracy", "test/balanced_accuracy", "group_balanced_accuracy", True),
+    ("Accuracy", "test/group_accuracy", "group_accuracy", False),
+    ("Balanced Accuracy", "test/balanced_accuracy", "group_balanced_accuracy", True),
     ("Donor Accuracy\n(majority vote)", "test/donor_majority_accuracy", "donor_majority_accuracy", False),
     ("Donor Balanced Acc.\n(majority vote)", "test/donor_majority_balanced_accuracy", "donor_majority_balanced_accuracy", True),
 ]
@@ -148,7 +148,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
 
             # Chance line (1/N for balanced accuracy, majority-class fraction for accuracy)
             chance = BALANCED_CHANCE if is_balanced else MAJORITY_CLASS_CHANCE[dataset]
-            ax.axhline(chance, color="grey", linestyle=":", linewidth=0.8, label="Chance" if col == 0 else None)
+            ax.axhline(chance, color="red", linestyle=":", linewidth=0.8, label="Chance" if col == 0 else None)
 
             # --- TissueFormer ---
             tf_ds = tf_df[tf_df["dataset_name"] == dataset]
@@ -213,12 +213,12 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
 
             # Formatting
             ax.set_title(DATASET_LABELS.get(dataset, dataset))
-            ax.set_xlabel("Group size")
+            ax.set_xlabel("# sampled cells")
             ax.set_xscale("log", base=2)
             ax.xaxis.set_major_formatter(ScalarFormatter())
             ax.grid(True, alpha=0.3)
             tick_positions = GROUP_SIZES + [ALL_X_POS]
-            tick_labels = [str(gs) for gs in GROUP_SIZES] + ["all"]
+            tick_labels = [str(gs) for gs in GROUP_SIZES] + ["all\ndonor\ncells"]
             ax.set_xticks(tick_positions)
             ax.set_xticklabels(tick_labels)
 
@@ -282,6 +282,9 @@ def main():
 
     tf_df, bench_df = classify_runs(df)
     tf_df = tf_df[tf_df["tags"].apply(lambda t: "with_val" in t if isinstance(t, list) else False)]
+
+    bench_df = bench_df[bench_df["tags"].apply(lambda t: "balanced" in t if isinstance(t, list) else False)]
+
     print(f"  TissueFormer runs: {len(tf_df)} (filtered by 'with_val' tag), Benchmark runs: {len(bench_df)}")
 
     plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, args.output_dir, args.benchmark_type,
