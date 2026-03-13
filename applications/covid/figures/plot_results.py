@@ -168,29 +168,9 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                         color=style["color"], marker=style["marker"],
                         label=style["label"], capsize=3, linewidth=1.5, markersize=5,
                     )
-                if is_donor_majority:
-                    # No "all" point for donor majority vote (majority vote
-                    # over a single group is meaningless).  The best group
-                    # size is transplanted to the balanced accuracy figure.
+                if is_donor_majority or tf_key == "test/balanced_accuracy":
+                    # No "all" point for donor majority vote or balanced accuracy
                     pass
-                elif tf_key == "test/balanced_accuracy" and not numeric_subset.empty:
-                    # "All donor cells" point = balanced accuracy at the
-                    # group size with the best donor majority vote accuracy.
-                    donor_key = "test/donor_majority_accuracy"
-                    if donor_key in tf_ds.columns:
-                        donor_sub = tf_ds[["data.group_size", donor_key]].dropna()
-                        donor_num = donor_sub[pd.to_numeric(donor_sub["data.group_size"], errors="coerce").notna()].copy()
-                        donor_num["data.group_size"] = pd.to_numeric(donor_num["data.group_size"])
-                        if not donor_num.empty:
-                            best_gs = donor_num.groupby("data.group_size")[donor_key].mean().idxmax()
-                            best_bal = numeric_subset[numeric_subset["data.group_size"] == best_gs][tf_key]
-                            if not best_bal.empty:
-                                ax.errorbar(
-                                    [ALL_X_POS], [best_bal.mean()],
-                                    yerr=[best_bal.std() if len(best_bal) > 1 else 0],
-                                    color=style["color"], marker=style["marker"],
-                                    capsize=3, linestyle="none", markersize=5,
-                                )
                 else:
                     all_subset = subset[subset["data.group_size"] == "all"]
                     if not all_subset.empty:
@@ -238,22 +218,22 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
 
             # Formatting
             ax.set_title(DATASET_LABELS.get(dataset, dataset))
-            xlabel_pad = -1 if row_label == "Balanced Accuracy" else None
-            ax.set_xlabel("# sampled cells", **({} if xlabel_pad is None else {"labelpad": xlabel_pad}))
+            ax.set_xlabel("# sampled cells")
             ax.set_xscale("log", base=2)
             ax.xaxis.set_major_formatter(ScalarFormatter())
             ax.grid(True, alpha=0.3)
-            if is_donor_majority:
-                tick_positions = GROUP_SIZES
-                tick_labels = [str(gs) for gs in GROUP_SIZES]
-            else:
+            has_all_point = not (is_donor_majority or tf_key == "test/balanced_accuracy")
+            if has_all_point:
                 tick_positions = GROUP_SIZES + [ALL_X_POS]
                 tick_labels = [str(gs) for gs in GROUP_SIZES] + ["all\ndonor\ncells"]
+            else:
+                tick_positions = GROUP_SIZES
+                tick_labels = [str(gs) for gs in GROUP_SIZES]
             ax.set_xticks(tick_positions)
             ax.set_xticklabels(tick_labels)
 
             # Axis-break marks between 512 and "all"
-            if not is_donor_majority:
+            if has_all_point:
                 break_x = (512 * ALL_X_POS) ** 0.5
                 trans = ax.get_xaxis_transform()
                 bkwargs = dict(transform=trans, color="k", clip_on=False, linewidth=0.8)
