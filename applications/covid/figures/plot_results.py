@@ -213,7 +213,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
 
             # Formatting
             ax.set_title(DATASET_LABELS.get(dataset, dataset))
-            ax.set_xlabel("# sampled cells")
+            ax.set_xlabel("# sampled cells", labelpad=-1)
             ax.set_xscale("log", base=2)
             ax.xaxis.set_major_formatter(ScalarFormatter())
             ax.grid(True, alpha=0.3)
