@@ -218,22 +218,22 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
 
             # Formatting
             ax.set_title(DATASET_LABELS.get(dataset, dataset))
-            ax.set_xlabel("# sampled cells")
+            xlabel_pad = -1 if tf_key == "test/balanced_accuracy" else None
+            ax.set_xlabel("# sampled cells", **({} if xlabel_pad is None else {"labelpad": xlabel_pad}))
             ax.set_xscale("log", base=2)
             ax.xaxis.set_major_formatter(ScalarFormatter())
             ax.grid(True, alpha=0.3)
-            has_all_point = not (is_donor_majority or tf_key == "test/balanced_accuracy")
-            if has_all_point:
-                tick_positions = GROUP_SIZES + [ALL_X_POS]
-                tick_labels = [str(gs) for gs in GROUP_SIZES] + ["all\ndonor\ncells"]
-            else:
+            if is_donor_majority:
                 tick_positions = GROUP_SIZES
                 tick_labels = [str(gs) for gs in GROUP_SIZES]
+            else:
+                tick_positions = GROUP_SIZES + [ALL_X_POS]
+                tick_labels = [str(gs) for gs in GROUP_SIZES] + ["all\ndonor\ncells"]
             ax.set_xticks(tick_positions)
             ax.set_xticklabels(tick_labels)
 
             # Axis-break marks between 512 and "all"
-            if has_all_point:
+            if not is_donor_majority:
                 break_x = (512 * ALL_X_POS) ** 0.5
                 trans = ax.get_xaxis_transform()
                 bkwargs = dict(transform=trans, color="k", clip_on=False, linewidth=0.8)
