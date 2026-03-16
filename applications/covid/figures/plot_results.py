@@ -168,9 +168,30 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                         color=style["color"], marker=style["marker"],
                         label=style["label"], capsize=3, linewidth=1.5, markersize=5,
                     )
-                if is_donor_majority or tf_key == "test/balanced_accuracy":
-                    # No "all" point for donor majority vote or balanced accuracy
+                if is_donor_majority:
+                    # No "all" point for donor majority vote
                     pass
+                elif tf_key == "test/balanced_accuracy":
+                    # Use the max donor_majority_balanced_accuracy as the "all" point
+                    donor_key = "test/donor_majority_balanced_accuracy"
+                    if donor_key in tf_ds.columns:
+                        donor_subset = tf_ds[["data.group_size", donor_key]].dropna()
+                        donor_numeric = donor_subset[pd.to_numeric(donor_subset["data.group_size"], errors="coerce").notna()].copy()
+                        donor_numeric["data.group_size"] = pd.to_numeric(donor_numeric["data.group_size"])
+                        if not donor_numeric.empty:
+                            donor_grouped = donor_numeric.groupby("data.group_size")[donor_key]
+                            donor_means = donor_grouped.mean()
+                            donor_stds = donor_grouped.std().fillna(0)
+                            best_gs = donor_means.idxmax()
+                            best_val = donor_means[best_gs]
+                            best_std = donor_stds[best_gs]
+                            ax.errorbar(
+                                [ALL_X_POS], [best_val], yerr=[best_std],
+                                color=style["color"], marker=style["marker"],
+                                capsize=3, linestyle="none", markersize=5,
+                            )
+                            print(f"  [{dataset}] Transplanted TissueFormer donor_majority_balanced_accuracy "
+                                  f"@ gs={int(best_gs)} ({best_val:.3f}) as 'all' point for balanced_accuracy")
                 else:
                     all_subset = subset[subset["data.group_size"] == "all"]
                     if not all_subset.empty:
