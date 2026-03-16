@@ -734,7 +734,7 @@ def run_dl_benchmark_brain(
 
     # Compute class weights for imbalanced labels
     from tissueformer.class_weights import calculate_class_weights
-    class_weights = calculate_class_weights(train_y, method="balanced")
+    class_weights = calculate_class_weights(train_y, method="balanced", n_classes=n_classes)
     class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32).to(device)
 
     # Build datasets (bags already formed, just wrap)

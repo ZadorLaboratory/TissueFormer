@@ -7,6 +7,7 @@ def calculate_class_weights(
     labels: np.ndarray,
     method: str = "balanced",
     beta: float = 0.999,
+    n_classes: int | None = None,
 ) -> np.ndarray:
     """
     Calculate class weights based on label frequencies.
@@ -18,14 +19,19 @@ def calculate_class_weights(
             - "balanced": sklearn-style  n_samples / (n_classes * counts).
             - "effective": Effective number of samples (1-beta)/(1-beta^count).
         beta: Parameter for the "effective" method.
+        n_classes: Total number of classes (size of the returned array).
+            Defaults to max(labels) + 1.
 
     Returns:
-        Array of shape (max_label + 1,) with per-class weights.
+        Array of shape (n_classes,) with per-class weights.
     """
     n_samples = len(labels)
-    max_label = max(labels)
+    if n_classes is None:
+        n_classes_total = int(max(labels)) + 1
+    else:
+        n_classes_total = n_classes
 
-    counts = np.bincount(labels, minlength=max_label + 1)
+    counts = np.bincount(labels, minlength=n_classes_total)
     present_classes = counts > 0
     n_classes = np.sum(present_classes)
 
