@@ -80,9 +80,9 @@ class SetTransformerLayer(nn.Module):
         self.feedforward = nn.Sequential(
             nn.Linear(config.set_hidden_size, config.set_hidden_size * 4),
             nn.GELU(),
-            nn.Dropout(config.dropout_prob),
+            # nn.Dropout(config.dropout_prob),
             nn.Linear(config.set_hidden_size * 4, config.set_hidden_size),
-            nn.Dropout(config.dropout_prob)
+            # nn.Dropout(config.dropout_prob)
         )
 
     def forward(
@@ -319,9 +319,16 @@ class HierarchicalBert(BertPreTrainedModel):
             if output_attentions and attn_weights is not None:
                 all_self_attentions = all_self_attentions + (attn_weights,)
         
+        # Apply sentence-level dropout before pooling
+        # Create a dropout mask for sentences using broadcasting
+        sentence_dropout_mask = torch.ones(batch_size, num_sentences, 1, 
+                                         device=hidden_states.device, 
+                                         dtype=hidden_states.dtype)
+        sentence_dropout_mask = self.dropout(sentence_dropout_mask)
+        hidden_states = hidden_states * sentence_dropout_mask
+        
         # Pool sentences (mean pooling)
         pooled = torch.mean(hidden_states, dim=1)
-        pooled = self.dropout(pooled)
         
         # Classification
         logits = self.classifier(pooled) # shape (batch_size, num_labels)
