@@ -97,8 +97,8 @@ from sklearn.utils import check_random_state
 from sklearn.preprocessing import OneHotEncoder
 
 # Import necessary components from train.py
-from samplers import (
-    MultiformerTrainer
+from tissueformer.samplers import (
+    GroupedSpatialTrainer
 )
 
 from transformers import PretrainedConfig
@@ -118,20 +118,20 @@ class DummyModel(PreTrainedModel):
         
 def get_dataloaders(datasets: DatasetDict, cfg: DictConfig) -> Dict[str, DataLoader]:
     """
-    Create dataloaders using MultiformerTrainer infrastructure.
+    Create dataloaders using GroupedSpatialTrainer infrastructure.
     """
     # Create minimal training arguments
     training_args = TrainingArguments(
         output_dir=cfg.output_dir,
         per_device_train_batch_size=cfg.data.group_size*32,
         per_device_eval_batch_size=cfg.data.group_size*32,
-        remove_unused_columns=False,  # Important for MultiformerTrainer
+        remove_unused_columns=False,  # Important for GroupedSpatialTrainer
     )
 
     dummy_config = DummyConfig()
 
     # Initialize trainer with dummy model
-    trainer = MultiformerTrainer(
+    trainer = GroupedSpatialTrainer(
         model=DummyModel(dummy_config),
         args=training_args,
         train_dataset=datasets["train"],
