@@ -32,11 +32,18 @@ def fit_zscore_params(X, cell_indices: np.ndarray | None = None):
     else:
         subset = X
     if scipy.sparse.issparse(subset):
-        # Use sparse-friendly stats
+        # Use sparse-friendly stats without materializing a full squared copy
         mean = np.asarray(subset.mean(axis=0)).ravel().astype(np.float32)
         # var = E[X^2] - E[X]^2
-        mean_sq = np.asarray(subset.multiply(subset).mean(axis=0)).ravel()
-        var = (mean_sq - mean ** 2).clip(min=0)
+        if scipy.sparse.isspmatrix_csr(subset):
+            sq_vals = subset.data.astype(np.float64) ** 2
+            mean_sq = np.bincount(
+                subset.indices, weights=sq_vals, minlength=subset.shape[1]
+            ) / subset.shape[0]
+            del sq_vals
+        else:
+            mean_sq = np.asarray(subset.multiply(subset).mean(axis=0)).ravel()
+        var = (mean_sq - mean.astype(np.float64) ** 2).clip(min=0)
         scale = np.sqrt(var).astype(np.float32)
     else:
         mean = np.mean(subset, axis=0).astype(np.float32)
@@ -56,17 +63,29 @@ def preprocess_zscore(X: np.ndarray, scaler: StandardScaler | None = None):
 
 
 def preprocess_cp10k_log1p(X):
-    """CP10k + log1p normalization.  Sparse-aware."""
+    """CP10k + log1p normalization.  Sparse-aware.
+
+    For sparse matrices, operates in-place on the CSR data array to avoid
+    creating multiple full copies (which can OOM on large datasets).
+    """
     if scipy.sparse.issparse(X):
+        if not scipy.sparse.isspmatrix_csr(X):
+            X = X.tocsr()
         X = X.astype(np.float32, copy=True)
         row_sums = np.asarray(X.sum(axis=1)).ravel()
         row_sums[row_sums == 0] = 1.0
-        # Efficient in-place row scaling for CSR
-        if not scipy.sparse.isspmatrix_csr(X):
-            X = X.tocsr()
-        diag = scipy.sparse.diags(1e4 / row_sums)
-        X = diag @ X
-        X = X.log1p()
+        # In-place row scaling via CSR data array (avoids diag @ X copy).
+        # Process in chunks to bound temporary memory.
+        scaling = (np.float32(1e4) / row_sums).astype(np.float32)
+        _CHUNK = 100_000
+        for r0 in range(0, X.shape[0], _CHUNK):
+            r1 = min(r0 + _CHUNK, X.shape[0])
+            d0, d1 = X.indptr[r0], X.indptr[r1]
+            row_nnz = np.diff(X.indptr[r0:r1 + 1])
+            X.data[d0:d1] *= np.repeat(scaling[r0:r1], row_nnz)
+        del scaling
+        # In-place log1p (avoids X.log1p() copy)
+        np.log1p(X.data, out=X.data)
         return X
     # Dense fallback
     total = X.sum(axis=1, keepdims=True)
@@ -80,13 +99,26 @@ def select_hvgs(X, n_hvgs: int = 1000) -> tuple:
     """Select top n_hvgs highly variable genes by variance.
 
     Works on both sparse and dense X.  Returns (X_subset, gene_indices).
+    For sparse matrices, computes variance without materializing a full
+    squared copy (avoids OOM on large datasets).
     """
     if X.shape[1] <= n_hvgs:
         return X, np.arange(X.shape[1])
     if scipy.sparse.issparse(X):
         mean = np.asarray(X.mean(axis=0)).ravel()
-        mean_sq = np.asarray(X.multiply(X).mean(axis=0)).ravel()
-        var = (mean_sq - mean ** 2).clip(min=0)
+        # Compute E[X^2] column-wise from CSR data without a full squared copy.
+        # np.bincount on the column indices with squared values as weights
+        # uses O(nnz) temporary memory instead of O(nnz) for the full copy.
+        n_rows = X.shape[0]
+        if scipy.sparse.isspmatrix_csr(X):
+            sq_vals = X.data.astype(np.float64) ** 2
+            mean_sq = np.bincount(
+                X.indices, weights=sq_vals, minlength=X.shape[1]
+            ) / n_rows
+            del sq_vals
+        else:
+            mean_sq = np.asarray(X.multiply(X).mean(axis=0)).ravel()
+        var = (mean_sq - mean.astype(np.float64) ** 2).clip(min=0)
     else:
         var = np.var(X, axis=0)
     top_idx = np.argsort(var)[-n_hvgs:]
@@ -260,28 +292,36 @@ def load_covid_mil_data(
     """
     import anndata as ad
 
+    import gc
+
     adata = ad.read_h5ad(h5ad_path)
     mask = adata.obs[donor_key].isin(donor_ids)
-    adata = adata[mask]
+    # adata[mask] creates a view that keeps the full parent alive,
+    # so copy the subset and delete the original to free memory.
+    adata = adata[mask].copy()
+    gc.collect()
 
-    # Extract expression — keep sparse to avoid OOM on large datasets
+    # Extract expression — keep sparse to avoid OOM on large datasets.
+    # .copy() above ensures X is independent of the original adata.
     X = adata.X
     if scipy.sparse.issparse(X):
-        X = X.astype(np.float32, copy=False)
         if not scipy.sparse.isspmatrix_csr(X):
-            X = X.tocsr()
+            X = scipy.sparse.csr_matrix(X, dtype=np.float32)
+        elif X.dtype != np.float32:
+            X = X.astype(np.float32)
     else:
         X = np.asarray(X, dtype=np.float32)
 
     # Build per-donor indices
+    obs = adata.obs  # keep a ref so we can del adata
     sample_indices = []
     labels = []
     donor_order = []
-    for donor in sorted(set(donor_ids) & set(adata.obs[donor_key].unique())):
-        donor_mask = (adata.obs[donor_key] == donor).values
+    for donor in sorted(set(donor_ids) & set(obs[donor_key].unique())):
+        donor_mask = (obs[donor_key] == donor).values
         idx = np.where(donor_mask)[0]
         sample_indices.append(idx)
-        donor_label = label_map[adata.obs[label_key].iloc[idx[0]]]
+        donor_label = label_map[obs[label_key].iloc[idx[0]]]
         labels.append(donor_label)
         donor_order.append(donor)
 
@@ -289,11 +329,14 @@ def load_covid_mil_data(
 
     # Cell types
     cell_types = None
-    if cell_type_key and cell_type_key in adata.obs.columns:
-        ct_unique = sorted(adata.obs[cell_type_key].unique())
+    if cell_type_key and cell_type_key in obs.columns:
+        ct_unique = sorted(obs[cell_type_key].unique())
         ct_map = {ct: i for i, ct in enumerate(ct_unique)}
         cell_types = np.array(
-            [ct_map[ct] for ct in adata.obs[cell_type_key]], dtype=np.int64
+            [ct_map[ct] for ct in obs[cell_type_key]], dtype=np.int64
         )
+
+    del adata, obs
+    gc.collect()
 
     return X, sample_indices, labels, cell_types, donor_order
