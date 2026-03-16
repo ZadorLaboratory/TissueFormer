@@ -15,6 +15,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
+import matplotlib.gridspec as gridspec
 import wandb
 
 
@@ -35,7 +36,6 @@ plt.rcParams.update({
 DATASETS = ["combat", "ren", "stevenson", "combined"]
 DATASET_LABELS = {"combat": "COMBAT", "ren": "Ren et al.", "stevenson": "Stevenson et al.", "combined": "Combined"}
 GROUP_SIZES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
-ALL_X_POS = 2048  # x-position for the disconnected "all donor cells" point (2 log2-steps past 512)
 N_CLASSES = 3  # control, mild, severe
 
 # Majority-class fraction per dataset (donor-level), used as chance for accuracy metrics.
@@ -139,21 +139,42 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
     os.makedirs(output_dir, exist_ok=True)
 
     for row_label, tf_key, bench_suffix, is_balanced in METRIC_ROWS:
-        fig, axes = plt.subplots(1, len(DATASETS),
-                                 figsize=(4 * len(DATASETS), 3),
-                                 sharex=sharex, sharey=sharey, squeeze=False)
+        is_donor_majority = "donor_majority" in tf_key
+        has_all_panel = not is_donor_majority
 
-        for col, dataset in enumerate(DATASETS):
-            ax = axes[0, col]
-            is_donor_majority = "donor_majority" in tf_key
+        # 2×2 layout; each cell holds a main panel (+ narrow "all" panel if applicable).
+        n_rows, n_cols = 2, 2
+        fig = plt.figure(figsize=(9, 6.5))
+        outer = gridspec.GridSpec(n_rows, n_cols, figure=fig, hspace=0.35, wspace=0.3)
 
-            # Chance line (1/N for balanced accuracy, majority-class fraction for accuracy)
+        main_axes = []
+        all_axes = []
+
+        for idx, dataset in enumerate(DATASETS):
+            row, col = divmod(idx, n_cols)
+            if has_all_panel:
+                inner = gridspec.GridSpecFromSubplotSpec(
+                    1, 2, subplot_spec=outer[row, col],
+                    width_ratios=[4, 1], wspace=0.05)
+                ax = fig.add_subplot(inner[0, 0],
+                                     sharey=main_axes[0] if (sharey and main_axes) else None)
+                ax_all = fig.add_subplot(inner[0, 1], sharey=ax)
+                all_axes.append(ax_all)
+            else:
+                ax = fig.add_subplot(outer[row, col],
+                                     sharey=main_axes[0] if (sharey and main_axes) else None)
+            main_axes.append(ax)
+
+            # Chance line
             chance = BALANCED_CHANCE if is_balanced else MAJORITY_CLASS_CHANCE[dataset]
-            ax.axhline(chance, color="red", linestyle=":", linewidth=0.8, label="Chance" if col == 0 else None)
+            ax.axhline(chance, color="red", linestyle=":", linewidth=0.8, label="Chance" if idx == 0 else None)
+            if has_all_panel:
+                ax_all.axhline(chance, color="red", linestyle=":", linewidth=0.8)
 
             # --- TissueFormer ---
             tf_ds = tf_df[tf_df["dataset_name"] == dataset]
             style = METHODS["tissueformer"]
+            all_points = []  # (mean, std, style_dict) for the "all" panel
             if tf_key in tf_ds.columns:
                 subset = tf_ds[["data.group_size", tf_key]].dropna()
                 numeric_mask = pd.to_numeric(subset["data.group_size"], errors="coerce").notna()
@@ -169,7 +190,6 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                         label=style["label"], capsize=3, linewidth=1.5, markersize=5,
                     )
                 if is_donor_majority:
-                    # No "all" point for donor majority vote
                     pass
                 elif tf_key == "test/balanced_accuracy":
                     # Use the max donor_majority_balanced_accuracy as the "all" point
@@ -185,11 +205,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                             best_gs = donor_means.idxmax()
                             best_val = donor_means[best_gs]
                             best_std = donor_stds[best_gs]
-                            ax.errorbar(
-                                [ALL_X_POS], [best_val], yerr=[best_std],
-                                color=style["color"], marker=style["marker"],
-                                capsize=3, linestyle="none", markersize=5,
-                            )
+                            all_points.append((best_val, best_std, style))
                             print(f"  [{dataset}] Transplanted TissueFormer donor_majority_balanced_accuracy "
                                   f"@ gs={int(best_gs)} ({best_val:.3f}) as 'all' point for balanced_accuracy")
                 else:
@@ -197,11 +213,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                     if not all_subset.empty:
                         all_mean = all_subset[tf_key].mean()
                         all_std = all_subset[tf_key].std() if len(all_subset) > 1 else 0
-                        ax.errorbar(
-                            [ALL_X_POS], [all_mean], yerr=[all_std],
-                            color=style["color"], marker=style["marker"],
-                            capsize=3, linestyle="none", markersize=5,
-                        )
+                        all_points.append((all_mean, all_std, style))
 
             # --- Benchmarks ---
             if bench_suffix is not None:
@@ -209,13 +221,13 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                 bench_methods = _get_benchmark_methods(benchmark_type)
                 for method_key, mstyle in bench_methods.items():
                     x_vals, means, stds = [], [], []
-                    for gs in GROUP_SIZES:
-                        col_name = _build_benchmark_col_name(method_key, gs, bench_suffix)
+                    for gs_val in GROUP_SIZES:
+                        col_name = _build_benchmark_col_name(method_key, gs_val, bench_suffix)
                         if col_name not in bench_ds.columns:
                             continue
                         values = pd.to_numeric(bench_ds[col_name], errors="coerce").dropna()
                         if len(values) > 0:
-                            x_vals.append(gs)
+                            x_vals.append(gs_val)
                             means.append(values.mean())
                             stds.append(values.std() if len(values) > 1 else 0)
 
@@ -226,57 +238,63 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                             label=mstyle["label"], capsize=3, linewidth=1.5, markersize=5,
                         )
 
-                    all_col = _build_benchmark_col_name(method_key, "all", bench_suffix)
-                    if all_col in bench_ds.columns:
-                        values = pd.to_numeric(bench_ds[all_col], errors="coerce").dropna()
-                        if len(values) > 0:
-                            ax.errorbar(
-                                [ALL_X_POS], [values.mean()],
-                                yerr=[values.std() if len(values) > 1 else 0],
-                                color=mstyle["color"], marker=mstyle["marker"],
-                                capsize=3, linestyle="none", markersize=5,
-                            )
+                    if has_all_panel:
+                        all_col = _build_benchmark_col_name(method_key, "all", bench_suffix)
+                        if all_col in bench_ds.columns:
+                            values = pd.to_numeric(bench_ds[all_col], errors="coerce").dropna()
+                            if len(values) > 0:
+                                all_points.append((values.mean(),
+                                                   values.std() if len(values) > 1 else 0,
+                                                   mstyle))
 
-            # Formatting
+            # --- "All donor cells" panel ---
+            if has_all_panel and all_points:
+                all_points.sort(key=lambda t: t[0])
+                for i, (mean, std, sty) in enumerate(all_points):
+                    ax_all.errorbar(
+                        [0], [mean], yerr=[std],
+                        color=sty["color"], marker=sty["marker"],
+                        capsize=3, linestyle="none", markersize=5,
+                    )
+
+            # --- Main axis formatting ---
             ax.set_title(DATASET_LABELS.get(dataset, dataset))
-            xlabel_pad = -1 if tf_key == "test/balanced_accuracy" else None
-            ax.set_xlabel("# sampled cells", **({} if xlabel_pad is None else {"labelpad": xlabel_pad}))
+            ax.set_xlabel("# sampled cells")
             ax.set_xscale("log", base=2)
             ax.xaxis.set_major_formatter(ScalarFormatter())
             ax.grid(True, alpha=0.3)
-            if is_donor_majority:
-                tick_positions = GROUP_SIZES
-                tick_labels = [str(gs) for gs in GROUP_SIZES]
-            else:
-                tick_positions = GROUP_SIZES + [ALL_X_POS]
-                tick_labels = [str(gs) for gs in GROUP_SIZES] + ["all\ndonor\ncells"]
-            ax.set_xticks(tick_positions)
-            ax.set_xticklabels(tick_labels)
+            ax.set_xticks(GROUP_SIZES)
+            ax.set_xticklabels([str(gs_val) for gs_val in GROUP_SIZES])
 
-            # Axis-break marks between 512 and "all"
-            if not is_donor_majority:
-                break_x = (512 * ALL_X_POS) ** 0.5
-                trans = ax.get_xaxis_transform()
-                bkwargs = dict(transform=trans, color="k", clip_on=False, linewidth=0.8)
-                d = 0.015
-                ax.plot((break_x * 0.92, break_x * 1.08), (-d, d), **bkwargs)
-                ax.plot((break_x * 0.92, break_x * 1.08), (-d - 0.01, d - 0.01), **bkwargs)
+            # --- "All" panel formatting ---
+            if has_all_panel:
+                ax_all.set_xlim(-0.5, 0.5)
+                ax_all.set_xticks([0])
+                ax_all.set_xticklabels(["all\ndonor\ncells"], fontsize=8)
+                ax_all.grid(True, alpha=0.3, axis="y")
+                ax_all.tick_params(axis="y", labelleft=False)
+                # Remove left spine of "all" panel and right spine of main panel
+                # to make them look like one connected unit
+                ax.spines["right"].set_visible(False)
+                ax_all.spines["left"].set_visible(False)
+                ax_all.tick_params(axis="y", left=False)
 
-        axes[0, 0].set_ylabel(row_label)
+        # Y-label on left-column panels (indices 0 and 2 in the 2×2 grid)
+        for i, ax in enumerate(main_axes):
+            if i % n_cols == 0:
+                ax.set_ylabel(row_label)
 
-        # Legend — deduplicate
+        # Legend — deduplicate across all axes
         handles, labels = [], []
-        for ax in axes[0]:
-            h, l = ax.get_legend_handles_labels()
+        for a in main_axes + all_axes:
+            h, l = a.get_legend_handles_labels()
             for hi, li in zip(h, l):
                 if li not in labels:
                     handles.append(hi)
                     labels.append(li)
         if handles:
             fig.legend(handles, labels, loc="upper center", ncol=min(len(handles), 6),
-                       bbox_to_anchor=(0.5, 1.12))
-
-        plt.tight_layout()
+                       bbox_to_anchor=(0.5, 1.02))
         # Filename from metric label (strip newlines, lowercase, underscores)
         metric_slug = row_label.replace("\n", " ").replace("(", "").replace(")", "").strip()
         metric_slug = "_".join(metric_slug.lower().split())
