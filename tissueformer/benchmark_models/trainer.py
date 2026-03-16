@@ -13,6 +13,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from sklearn.metrics import balanced_accuracy_score
 
 import wandb
 
@@ -191,12 +192,14 @@ class BenchmarkTrainer:
             val_loss, val_preds, val_labels, val_probs = self.eval_epoch()
 
             val_acc = (val_preds == val_labels).mean()
+            val_bal_acc = balanced_accuracy_score(val_labels, val_preds)
 
             wandb.log(
                 {
                     f"{self.model_name}/train_loss": train_loss,
                     f"{self.model_name}/val_loss": val_loss,
                     f"{self.model_name}/val_accuracy": val_acc,
+                    f"{self.model_name}/val_balanced_accuracy": val_bal_acc,
                     f"{self.model_name}/epoch": epoch,
                     f"{self.model_name}/lr": self.optimizer.param_groups[0]["lr"],
                 }
@@ -205,7 +208,7 @@ class BenchmarkTrainer:
             print(
                 f"  [{self.model_name}] Epoch {epoch+1}/{self.n_epochs}: "
                 f"train_loss={train_loss:.4f}, val_loss={val_loss:.4f}, "
-                f"val_acc={val_acc:.3f}"
+                f"val_acc={val_acc:.3f}, val_bal_acc={val_bal_acc:.3f}"
             )
 
             # Early stopping check

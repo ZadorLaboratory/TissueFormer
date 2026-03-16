@@ -291,8 +291,10 @@ def evaluate_method(
     """Evaluate predictions and save results."""
     
     # Extract metrics
+    from sklearn.metrics import balanced_accuracy_score
     metrics = {
         "accuracy": (predictions == labels).mean(),
+        "balanced_accuracy": balanced_accuracy_score(labels, predictions),
     }
 
     # Save predictions
@@ -728,7 +730,12 @@ def run_dl_benchmark_brain(
         test_X = preprocess_cp10k_log1p(test_X)
 
     n_genes = train_X.shape[1]
-    n_classes = len(set(train_y))
+    n_classes = int(max(train_y.max(), val_y.max(), test_y.max())) + 1
+
+    # Compute class weights for imbalanced labels
+    from tissueformer.class_weights import calculate_class_weights
+    class_weights = calculate_class_weights(train_y, method="balanced")
+    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32).to(device)
 
     # Build datasets (bags already formed, just wrap)
     train_ds = MILDataset(train_X, train_si, train_y)
@@ -752,12 +759,14 @@ def run_dl_benchmark_brain(
         )
         optimizer = torch.optim.Adam(model.parameters(), lr=model_cfg.lr, weight_decay=model_cfg.l2_reg)
         l1_fn = lambda: model.l1_loss(model_cfg.l1_reg)
+        loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
         trainer = BenchmarkTrainer(
             model=model, optimizer=optimizer,
             train_loader=train_loader, val_loader=val_loader,
             device=device, n_epochs=model_cfg.n_epochs,
             early_stopping_patience=model_cfg.early_stopping_patience,
-            l1_loss_fn=l1_fn, model_name=model_name, n_classes=n_classes,
+            l1_loss_fn=l1_fn, loss_fn=loss_fn,
+            model_name=model_name, n_classes=n_classes,
         )
     elif model_name == "scagg":
         model = ScAGG(
@@ -767,7 +776,7 @@ def run_dl_benchmark_brain(
             dropout=model_cfg.dropout,
         )
         optimizer = torch.optim.Adam(model.parameters(), lr=model_cfg.lr, weight_decay=model_cfg.weight_decay)
-        loss_fn = torch.nn.CrossEntropyLoss(reduction=model_cfg.loss_reduction)
+        loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor, reduction=model_cfg.loss_reduction)
         trainer = BenchmarkTrainer(
             model=model, optimizer=optimizer,
             train_loader=train_loader, val_loader=val_loader,
@@ -787,14 +796,15 @@ def run_dl_benchmark_brain(
             optimizer, num_warmup_steps=model_cfg.lr_warmup_epochs,
             num_training_steps=model_cfg.n_epochs,
         )
+        loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
         trainer = BenchmarkTrainer(
             model=model, optimizer=optimizer,
             train_loader=train_loader, val_loader=val_loader,
             device=device, n_epochs=model_cfg.n_epochs,
             early_stopping_patience=model_cfg.early_stopping_patience,
             early_stopping_start_epoch=model_cfg.early_stopping_start_epoch,
-            scheduler=scheduler, model_name=model_name,
-            use_sigmoid=True, n_classes=n_classes,
+            scheduler=scheduler, loss_fn=loss_fn,
+            model_name=model_name, n_classes=n_classes,
         )
     else:
         raise ValueError(f"Unknown DL benchmark: {model_name}")
