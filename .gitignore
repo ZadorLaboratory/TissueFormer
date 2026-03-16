@@ -25,7 +25,6 @@ wandb/
 
 # Images and documents
 *.pdf
-*.png
 
 # Reference repos
 references/

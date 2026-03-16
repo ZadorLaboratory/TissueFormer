@@ -49,7 +49,7 @@ def setup_wandb(cfg: DictConfig):
         entity=cfg.wandb.entity,
         name=f"benchmark_{cfg.wandb.name}",
         group=cfg.wandb.group,
-        tags=cfg.wandb.tags + ["benchmark"],
+        tags=cfg.wandb.tags + ["benchmark", "balanced"],
         notes=cfg.wandb.notes,
         config=OmegaConf.to_container(cfg, resolve=True),
     )
@@ -517,6 +517,7 @@ def run_dl_benchmark(
     and reports both group-level and donor-aggregated metrics.
     """
     from torch.utils.data import DataLoader
+    from tissueformer.class_weights import calculate_class_weights
     from tissueformer.benchmark_models.data import (
         MILDataset, CroppedMILDataset, mil_collate_fn,
         load_covid_mil_data, preprocess_zscore, preprocess_cp10k_log1p,
@@ -571,6 +572,11 @@ def run_dl_benchmark(
     )
     train_idx = actual_train_idx
     print(f"  Donor split: {len(train_idx)} train, {len(val_idx)} val, {len(test_idx)} test")
+
+    # Compute class weights from training labels for balanced loss
+    train_labels = labels[train_idx]
+    cw = calculate_class_weights(train_labels, method="balanced")
+    class_weights_tensor = torch.tensor(cw, dtype=torch.float32).to(device)
 
     # Apply preprocessing (sparse-aware to avoid OOM on large datasets)
     preprocess = model_cfg.get("preprocess", "raw")
@@ -738,10 +744,12 @@ def run_dl_benchmark(
             weight_decay=model_cfg.l2_reg,
         )
         l1_fn = lambda: model.l1_loss(model_cfg.l1_reg)
+        loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
         trainer = BenchmarkTrainer(
             model=model, optimizer=optimizer,
             train_loader=train_loader, val_loader=val_loader,
             device=device, n_epochs=model_cfg.n_epochs,
+            loss_fn=loss_fn,
             early_stopping_patience=model_cfg.early_stopping_patience,
             l1_loss_fn=l1_fn, model_name=model_name,
             n_classes=n_classes,
@@ -760,6 +768,7 @@ def run_dl_benchmark(
             weight_decay=model_cfg.weight_decay,
         )
         loss_fn = torch.nn.CrossEntropyLoss(
+            weight=class_weights_tensor,
             reduction=model_cfg.loss_reduction,
         )
         trainer = BenchmarkTrainer(
@@ -789,10 +798,12 @@ def run_dl_benchmark(
             num_warmup_steps=model_cfg.lr_warmup_epochs,
             num_training_steps=model_cfg.n_epochs,
         )
+        loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=class_weights_tensor)
         trainer = BenchmarkTrainer(
             model=model, optimizer=optimizer,
             train_loader=train_loader, val_loader=val_loader,
             device=device, n_epochs=model_cfg.n_epochs,
+            loss_fn=loss_fn,
             early_stopping_patience=model_cfg.early_stopping_patience,
             early_stopping_start_epoch=model_cfg.early_stopping_start_epoch,
             scheduler=scheduler, model_name=model_name,

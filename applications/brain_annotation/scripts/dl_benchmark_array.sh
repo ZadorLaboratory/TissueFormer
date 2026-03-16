@@ -19,6 +19,9 @@ module purge
 module load cuda12.3/toolkit/12.3.2
 module load cudnn8.6-cuda11.8/8.6.0.163
 
+eval "$(micromamba shell hook --shell bash)"
+micromamba activate brain_annotation2
+
 # Single-GPU DeepSpeed needs these env vars to avoid MPI fallback
 export MASTER_ADDR=localhost
 export MASTER_PORT=29500
@@ -62,7 +65,7 @@ python benchmarks.py \
     run_h3type_rf=false \
     run_h3type_lr=false \
     run_cellcnn=true \
-    run_scagg=true \
-    run_scrat=true \
+    run_scagg=false \
+    run_scrat=false \
     wandb.name="dl_benchmark_fold${fold}_gs${batch_size}" \
     wandb.tags="[dl_benchmark]"

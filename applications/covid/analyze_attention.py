@@ -5,6 +5,9 @@ generates figures showing which cell types receive the most attention.
 
 Usage:
     python analyze_attention.py model_checkpoint_path=/path/to/model
+
+e.g.
+python analyze_attention.py model_checkpoint_path=/home/benjami/mnt/zador_data_norepl/Ari/transcriptomics/checkpoints/covid/combat/2026-03-09/19-16-15/model training.output_dir=figures data.group_size=16 attention_analysis.max_groups=10000
 """
 
 import os
