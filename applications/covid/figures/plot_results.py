@@ -144,7 +144,7 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
 
         # 2×2 layout; each cell holds a main panel (+ narrow "all" panel if applicable).
         n_rows, n_cols = 2, 2
-        fig = plt.figure(figsize=(9, 6.5))
+        fig = plt.figure(figsize=(13.5, 6.5))
         outer = gridspec.GridSpec(n_rows, n_cols, figure=fig, hspace=0.35, wspace=0.3)
 
         main_axes = []
@@ -273,11 +273,6 @@ def plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, output_dir, benchmark_type
                 ax_all.set_xticklabels(["all\ndonor\ncells"], fontsize=8)
                 ax_all.grid(True, alpha=0.3, axis="y")
                 ax_all.tick_params(axis="y", labelleft=False)
-                # Remove left spine of "all" panel and right spine of main panel
-                # to make them look like one connected unit
-                ax.spines["right"].set_visible(False)
-                ax_all.spines["left"].set_visible(False)
-                ax_all.tick_params(axis="y", left=False)
 
         # Y-label on left-column panels (indices 0 and 2 in the 2×2 grid)
         for i, ax in enumerate(main_axes):
