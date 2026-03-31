@@ -24,13 +24,17 @@ from tissueformer.model import TissueFormer, TissueFormerConfig
 from tissueformer.samplers import SpatialGroupCollator, DonorGroupSampler
 from tissueformer.attention_analysis import (
     AttentionCollector,
+    LOOCollector,
     cell_type_attention_summary,
     cell_type_total_attention_summary,
+    loo_importance_summary,
     plot_single_group_heatmap,
     plot_attention_per_label,
     plot_overall_attention_ranking,
     plot_total_attention_ranking,
     plot_abundance_vs_attention,
+    plot_loo_importance_ranking,
+    plot_loo_importance_per_label,
 )
 
 try:
@@ -159,6 +163,36 @@ def main(cfg: DictConfig) -> None:
     csv_path = os.path.join(output_dir, "attention_summary.csv")
     summary.to_csv(csv_path, index=False)
     print(f"Saved: {csv_path}")
+
+    # --- Leave-one-out importance analysis ---
+    loo_collector = LOOCollector(
+        model=model,
+        dataset=eval_dataset,
+        collator=collator,
+        sampler=sampler,
+        cell_type_key=cell_type_key,
+        label_names=label_names,
+        batch_size=cfg.data.group_size,
+        max_groups=max_groups,
+    )
+    print("Running leave-one-out importance analysis...")
+    loo_results = loo_collector.collect()
+    print(f"Collected {len(loo_results.records)} LOO records")
+
+    loo_summary = loo_importance_summary(loo_results)
+
+    # 6. Overall LOO importance ranking
+    fig = plot_loo_importance_ranking(loo_summary, top_k=top_k + 5)
+    save_fig(fig, "loo_importance_ranking")
+
+    # 7. Per-label LOO importance
+    fig = plot_loo_importance_per_label(loo_summary, top_k=top_k)
+    save_fig(fig, "loo_importance_per_label")
+
+    # Save LOO summary CSV
+    loo_csv_path = os.path.join(output_dir, "loo_importance_summary.csv")
+    loo_summary.to_csv(loo_csv_path, index=False)
+    print(f"Saved: {loo_csv_path}")
 
 
 if __name__ == "__main__":

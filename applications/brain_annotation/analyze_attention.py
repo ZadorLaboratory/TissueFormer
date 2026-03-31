@@ -23,13 +23,17 @@ from tissueformer.model import TissueFormer, TissueFormerConfig
 from tissueformer.samplers import SpatialGroupCollator, SpatialGroupSampler
 from tissueformer.attention_analysis import (
     AttentionCollector,
+    LOOCollector,
     cell_type_attention_summary,
     cell_type_total_attention_summary,
+    loo_importance_summary,
     plot_single_group_heatmap,
     plot_attention_per_label,
     plot_overall_attention_ranking,
     plot_total_attention_ranking,
     plot_abundance_vs_attention,
+    plot_loo_importance_ranking,
+    plot_loo_importance_per_label,
 )
 from tissueformer.train import prepare_datasets
 
@@ -180,6 +184,47 @@ def main(cfg: DictConfig) -> None:
     csv_path = os.path.join(output_dir, "attention_summary.csv")
     summary.to_csv(csv_path, index=False)
     print(f"Saved: {csv_path}")
+
+    # --- Leave-one-out importance analysis ---
+    loo_collector = LOOCollector(
+        model=model,
+        dataset=eval_dataset,
+        collator=collator,
+        sampler=sampler,
+        cell_type_key=cell_type_key,
+        label_names=label_names,
+        batch_size=512,
+        max_groups=max_groups,
+    )
+    print("Running leave-one-out importance analysis...")
+    loo_results = loo_collector.collect()
+    print(f"Collected {len(loo_results.records)} LOO records")
+
+    loo_summary = loo_importance_summary(loo_results)
+
+    # Filter to labels with the most groups for a readable per-label plot
+    if len(loo_summary["label"].unique()) > max_labels_in_plot:
+        loo_label_counts = loo_summary.groupby("label")["n_groups"].sum().nlargest(max_labels_in_plot)
+        loo_summary_subset = loo_summary[loo_summary["label"].isin(loo_label_counts.index)]
+    else:
+        loo_summary_subset = loo_summary
+
+    # 6. Overall LOO importance ranking
+    fig = plot_loo_importance_ranking(loo_summary, top_k=top_k + 5, color_map=color_map)
+    path = os.path.join(output_dir, "loo_importance_ranking.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    print(f"Saved: {path}")
+
+    # 7. Per-label LOO importance
+    fig = plot_loo_importance_per_label(loo_summary_subset, top_k=top_k, color_map=color_map)
+    path = os.path.join(output_dir, "loo_importance_per_label.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    print(f"Saved: {path}")
+
+    # Save LOO summary CSV
+    loo_csv_path = os.path.join(output_dir, "loo_importance_summary.csv")
+    loo_summary.to_csv(loo_csv_path, index=False)
+    print(f"Saved: {loo_csv_path}")
 
 
 if __name__ == "__main__":

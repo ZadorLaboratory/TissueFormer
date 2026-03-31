@@ -3,6 +3,10 @@
 Collects attention weights from the Set Transformer layers and aggregates
 them by cell type to understand which cell types receive the most attention
 for each predicted label.
+
+Also provides leave-one-out (LOO) importance analysis: for each group,
+drop all cells of a given type, re-run the model, and measure the increase
+in cross-entropy loss for the true label.
 """
 
 from dataclasses import dataclass, field
@@ -11,6 +15,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
@@ -131,6 +136,182 @@ class AttentionCollector:
             labels=np.array(all_labels),
             label_names={int(k): v for k, v in self.label_names.items()},
         )
+
+
+@dataclass
+class LOOResults:
+    """Container for leave-one-out importance results."""
+    records: List[Dict] = field(default_factory=list)
+    label_names: Dict[int, str] = field(default_factory=dict)
+
+
+class LOOCollector:
+    """Leave-one-out cell type importance analysis.
+
+    For each group, drops all cells of a given type, re-runs the model,
+    and measures the increase in cross-entropy loss for the true label.
+    """
+
+    def __init__(
+        self,
+        model,
+        dataset,
+        collator,
+        sampler,
+        cell_type_key: str = "cell_type",
+        label_names: Optional[Dict] = None,
+        batch_size: int = 64,
+        max_groups: Optional[int] = None,
+        num_workers: int = 0,
+    ):
+        self.model = model
+        self.dataset = dataset
+        self.collator = collator
+        self.sampler = sampler
+        self.cell_type_key = cell_type_key
+        self.label_names = label_names or {}
+        self.batch_size = batch_size
+        self.max_groups = max_groups
+        self.num_workers = num_workers
+
+    def _compute_loss(self, logits: torch.Tensor, label: int) -> float:
+        """Cross-entropy loss for a single group's logits against true label."""
+        target = torch.tensor([label], device=logits.device)
+        return F.cross_entropy(logits, target).item()
+
+    def collect(self) -> LOOResults:
+        """Run LOO analysis for all groups."""
+        device = next(self.model.parameters()).device
+        self.model.eval()
+
+        dataloader = DataLoader(
+            self.dataset,
+            batch_size=self.batch_size,
+            sampler=self.sampler,
+            collate_fn=self.collator,
+            num_workers=self.num_workers,
+            pin_memory=False,
+        )
+
+        records = []
+        total_groups = 0
+
+        with torch.no_grad():
+            for batch in dataloader:
+                batch_cell_types = batch.pop(self.cell_type_key, None)
+                batch_labels = batch.pop("labels", None)
+                batch.pop("single_cell_labels", None)
+
+                # Separate tensor inputs from non-tensor
+                tensor_keys = [k for k, v in batch.items() if isinstance(v, torch.Tensor)]
+                n_groups_in_batch = batch[tensor_keys[0]].shape[0]
+
+                for i in range(n_groups_in_batch):
+                    if self.max_groups is not None and total_groups >= self.max_groups:
+                        break
+
+                    true_label = int(batch_labels[i].item()) if batch_labels is not None else -1
+                    cell_types = batch_cell_types[i] if batch_cell_types is not None else []
+                    if not cell_types or true_label < 0:
+                        total_groups += 1
+                        continue
+
+                    label_name = self.label_names.get(true_label, str(true_label))
+                    group_size = len(cell_types)
+
+                    # Build single-group inputs: (1, num_sentences, ...)
+                    group_inputs = {}
+                    for k in tensor_keys:
+                        group_inputs[k] = batch[k][i : i + 1].to(device)
+
+                    # Baseline forward pass
+                    baseline_out = self.model(**group_inputs, output_attentions=False, return_dict=True)
+                    baseline_logits = baseline_out.logits  # (1, num_labels)
+                    baseline_pred = int(torch.argmax(baseline_logits, dim=-1).item())
+                    baseline_loss = self._compute_loss(baseline_logits, true_label)
+                    baseline_correct = baseline_pred == true_label
+
+                    # LOO for each unique cell type in this group
+                    unique_types = set(cell_types)
+                    for drop_type in unique_types:
+                        keep_indices = [j for j, ct in enumerate(cell_types) if ct != drop_type]
+                        if len(keep_indices) == 0:
+                            continue  # can't drop all cells
+
+                        n_dropped = group_size - len(keep_indices)
+
+                        # Slice to keep only non-dropped cells
+                        loo_inputs = {}
+                        for k in tensor_keys:
+                            t = group_inputs[k]  # (1, num_sentences, ...)
+                            if t.dim() >= 2 and t.shape[1] == group_size:
+                                loo_inputs[k] = t[:, keep_indices]
+                            else:
+                                loo_inputs[k] = t  # labels or scalars, keep as-is
+
+                        loo_out = self.model(**loo_inputs, output_attentions=False, return_dict=True)
+                        loo_logits = loo_out.logits
+                        loo_pred = int(torch.argmax(loo_logits, dim=-1).item())
+                        loo_loss = self._compute_loss(loo_logits, true_label)
+                        loo_correct = loo_pred == true_label
+
+                        records.append({
+                            "group_idx": total_groups,
+                            "true_label": true_label,
+                            "label_name": label_name,
+                            "dropped_type": drop_type,
+                            "n_dropped": n_dropped,
+                            "group_size": group_size,
+                            "baseline_correct": baseline_correct,
+                            "loo_correct": loo_correct,
+                            "baseline_loss": baseline_loss,
+                            "loo_loss": loo_loss,
+                            "loss_increase": loo_loss - baseline_loss,
+                        })
+
+                    total_groups += 1
+
+                if self.max_groups is not None and total_groups >= self.max_groups:
+                    break
+
+        return LOOResults(
+            records=records,
+            label_names={int(k): v for k, v in self.label_names.items()},
+        )
+
+
+def loo_importance_summary(results: LOOResults) -> pd.DataFrame:
+    """Summarise LOO importance per (label, cell_type).
+
+    Returns a DataFrame with columns:
+        [label, cell_type, mean_loss_increase, sem, n_groups,
+         mean_n_dropped, error_rate_increase]
+    """
+    if not results.records:
+        return pd.DataFrame(
+            columns=["label", "cell_type", "mean_loss_increase", "sem",
+                     "n_groups", "mean_n_dropped", "error_rate_increase"]
+        )
+
+    df = pd.DataFrame(results.records)
+
+    # Error rate change: +1 if flipped correct→incorrect, -1 if incorrect→correct, 0 otherwise
+    df["error_flip"] = df["baseline_correct"].astype(int) - df["loo_correct"].astype(int)
+
+    summary = (
+        df.groupby(["label_name", "dropped_type"])
+        .agg(
+            mean_loss_increase=("loss_increase", "mean"),
+            sem=("loss_increase", "sem"),
+            n_groups=("loss_increase", "count"),
+            mean_n_dropped=("n_dropped", "mean"),
+            error_rate_increase=("error_flip", "mean"),
+        )
+        .reset_index()
+        .rename(columns={"label_name": "label", "dropped_type": "cell_type"})
+    )
+    summary["sem"] = summary["sem"].fillna(0)
+    return summary.sort_values("mean_loss_increase", ascending=False)
 
 
 def aggregate_attention_by_cell_type(
@@ -506,5 +687,98 @@ def plot_abundance_vs_attention(
     ax.set_xlabel("Mean fractional abundance in group")
     ax.set_ylabel("Mean attention received per cell")
     ax.set_title("Cell type abundance vs. attention received")
+    fig.tight_layout()
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# LOO plots
+# ---------------------------------------------------------------------------
+
+def plot_loo_importance_ranking(
+    summary_df: pd.DataFrame,
+    top_k: int = 20,
+    figsize: tuple = (8, 6),
+    color_map: Optional[Dict] = None,
+) -> plt.Figure:
+    """Bar chart of cell types ranked by mean LOO loss increase.
+
+    Parameters
+    ----------
+    summary_df : DataFrame
+        Output of :func:`loo_importance_summary`.
+    color_map : dict, optional
+        Mapping of cell type name to color.
+    """
+    grouped = summary_df.groupby("cell_type")["mean_loss_increase"]
+    overall_mean = grouped.mean()
+    overall_sem = grouped.sem().fillna(0)
+    top_types = overall_mean.nlargest(top_k).index
+    overall_mean = overall_mean[top_types].sort_values()
+    overall_sem = overall_sem[top_types].reindex(overall_mean.index)
+    colors = _get_bar_colors(overall_mean.index, color_map)
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2, color=colors)
+    ax.axvline(x=0, color="k", linewidth=0.5, alpha=0.5)
+    ax.set_xlabel("Mean cross-entropy loss increase when dropped")
+    ax.set_title(f"Top {top_k} cell types by LOO importance")
+    ax.tick_params(axis="y", labelsize=8)
+    fig.tight_layout()
+    return fig
+
+
+def plot_loo_importance_per_label(
+    summary_df: pd.DataFrame,
+    top_k: int = 5,
+    figsize_per_subplot: tuple = (5, 2.2),
+    color_map: Optional[Dict] = None,
+) -> plt.Figure:
+    """Per-label subplot grid of top-K cell types by LOO importance.
+
+    Parameters
+    ----------
+    summary_df : DataFrame
+        Output of :func:`loo_importance_summary`.
+    color_map : dict, optional
+        Mapping of cell type name to color.
+    """
+    labels = sorted(summary_df["label"].unique())
+    n_labels = len(labels)
+    if n_labels == 0:
+        fig, ax = plt.subplots()
+        ax.text(0.5, 0.5, "No data", ha="center", va="center")
+        return fig
+
+    ncols = min(3, n_labels)
+    nrows = (n_labels + ncols - 1) // ncols
+    fig, axes = plt.subplots(
+        nrows, ncols,
+        figsize=(figsize_per_subplot[0] * ncols, figsize_per_subplot[1] * nrows),
+        sharex=True,
+        squeeze=False,
+    )
+
+    for idx, label in enumerate(labels):
+        ax = axes[idx // ncols][idx % ncols]
+        subset = summary_df[summary_df["label"] == label].nlargest(top_k, "mean_loss_increase")
+        cell_types = subset["cell_type"].values[::-1]
+        means = subset["mean_loss_increase"].values[::-1]
+        sem_vals = subset["sem"].values[::-1] if "sem" in subset.columns else None
+        colors = _get_bar_colors(cell_types, color_map)
+        ax.barh(cell_types, means, xerr=sem_vals, capsize=2, color=colors)
+        ax.axvline(x=0, color="k", linewidth=0.5, alpha=0.5)
+        ax.set_title(label, fontsize=11, fontweight="bold")
+        ax.tick_params(axis="y", labelsize=9)
+        ax.tick_params(axis="x", labelsize=9)
+
+    for col in range(ncols):
+        axes[-1][col].set_xlabel("Mean loss increase", fontsize=10)
+
+    for idx in range(n_labels, nrows * ncols):
+        axes[idx // ncols][idx % ncols].set_visible(False)
+
+    fig.supylabel(f"Top {top_k} cell types by LOO importance", fontsize=11)
+    fig.suptitle("LOO importance per label", fontsize=13, fontweight="bold")
     fig.tight_layout()
     return fig
