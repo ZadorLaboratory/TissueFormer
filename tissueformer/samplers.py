@@ -830,11 +830,13 @@ class SpatialGroupSampler(Sampler):
             yield from range(self.num_samples)
         
         if self.iterate_all_points:
-            # Lazy approach: yield each group's points as they're computed
-            for center_idx in range(self.num_samples):
-                # Optional logging at reasonable intervals
-                if center_idx % 1000 == 0:
-                    print(f"Processing center point {center_idx}/{self.num_samples}")
+            # Shuffle center order so early-stopping (max_groups) gets a
+            # representative mix of labels instead of iterating one animal
+            # at a time in dataset order.
+            center_order = torch.randperm(self.num_samples, generator=g).tolist()
+            for progress, center_idx in enumerate(center_order):
+                if progress % 1000 == 0:
+                    print(f"Processing center point {progress}/{self.num_samples}")
                     
                 group = self._get_spatial_group(center_idx)
                 if group is not None:
@@ -974,10 +976,11 @@ class DistributedSpatialGroupSampler(Sampler):
             return iter(indices[self.rank:self.total_size:self.num_replicas])
             
         if self.iterate_all_points:
-            indices = list(range(len(self.dataset)))
+            # Shuffle so early-stopping gets representative label coverage
+            indices = torch.randperm(len(self.dataset), generator=g).tolist()
             if len(indices) < self.total_size:
                 indices = indices * (self.total_size // len(indices) + 1)
-            indices = indices[:self.total_size]            
+            indices = indices[:self.total_size]
             for center_idx in indices[self.rank:self.total_size:self.num_replicas]:
                 group = self._get_spatial_group(center_idx)
                 if group is None:
