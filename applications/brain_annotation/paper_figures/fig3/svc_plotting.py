@@ -639,8 +639,8 @@ def create_decision_boundary_plot_with_density_mask(
             
             # Convert back to numpy
             density_map = cp.asnumpy(density_cp)
-        except (ImportError, ModuleNotFoundError):
-            # Fallback to scipy if cupyx is not available
+        except Exception:
+            # Fallback to scipy if cupyx is not available or NVRTC compilation fails
             from scipy import ndimage
             density_map = ndimage.gaussian_filter(density_map, sigma=smooth_sigma)
     
