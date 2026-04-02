@@ -700,6 +700,8 @@ def plot_loo_importance_ranking(
     top_k: int = 20,
     figsize: tuple = (8, 6),
     color_map: Optional[Dict] = None,
+    vertical: bool = False,
+    bar_color: Optional[str] = None,
 ) -> plt.Figure:
     """Bar chart of cell types ranked by mean LOO loss increase.
 
@@ -709,6 +711,10 @@ def plot_loo_importance_ranking(
         Output of :func:`loo_importance_summary`.
     color_map : dict, optional
         Mapping of cell type name to color.
+    vertical : bool
+        If True, use vertical bars instead of horizontal.
+    bar_color : str, optional
+        Override all bar colors with a single color.
     """
     grouped = summary_df.groupby("cell_type")["mean_loss_increase"]
     overall_mean = grouped.mean()
@@ -716,14 +722,27 @@ def plot_loo_importance_ranking(
     top_types = overall_mean.nlargest(top_k).index
     overall_mean = overall_mean[top_types].sort_values()
     overall_sem = overall_sem[top_types].reindex(overall_mean.index)
-    colors = _get_bar_colors(overall_mean.index, color_map)
+
+    if bar_color is not None:
+        colors = bar_color
+    else:
+        colors = _get_bar_colors(overall_mean.index, color_map)
 
     fig, ax = plt.subplots(figsize=figsize)
-    ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2, color=colors)
-    ax.axvline(x=0, color="k", linewidth=0.5, alpha=0.5)
-    ax.set_xlabel("Mean cross-entropy loss increase when dropped")
+    if vertical:
+        # Reverse so highest is on the left
+        overall_mean = overall_mean[::-1]
+        overall_sem = overall_sem.reindex(overall_mean.index)
+        ax.bar(overall_mean.index, overall_mean.values, yerr=overall_sem.values, capsize=2, color=colors)
+        ax.axhline(y=0, color="k", linewidth=0.5, alpha=0.5)
+        ax.set_ylabel("Mean cross-entropy loss increase when dropped")
+        ax.tick_params(axis="x", labelsize=8, rotation=90)
+    else:
+        ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2, color=colors)
+        ax.axvline(x=0, color="k", linewidth=0.5, alpha=0.5)
+        ax.set_xlabel("Mean cross-entropy loss increase when dropped")
+        ax.tick_params(axis="y", labelsize=8)
     ax.set_title(f"Top {top_k} cell types by LOO importance")
-    ax.tick_params(axis="y", labelsize=8)
     fig.tight_layout()
     return fig
 

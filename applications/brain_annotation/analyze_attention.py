@@ -53,7 +53,7 @@ def main(cfg: DictConfig) -> None:
     split = attn_cfg.get("split", "test")
     max_groups = attn_cfg.get("max_groups", None)
     # With 290 labels, only show a subset in per-label plots
-    max_labels_in_plot = attn_cfg.get("max_labels_in_plot", 12)
+    max_labels_in_plot = attn_cfg.get("max_labels_in_plot", 18)
 
     set_seed(cfg.seed)
     disable_caching()
@@ -210,7 +210,10 @@ def main(cfg: DictConfig) -> None:
         loo_summary_subset = loo_summary
 
     # 6. Overall LOO importance ranking
-    fig = plot_loo_importance_ranking(loo_summary, top_k=top_k + 5, color_map=color_map)
+    fig = plot_loo_importance_ranking(
+        loo_summary, top_k=top_k + 5, figsize=(10, 4),
+        vertical=True, bar_color="black",
+    )
     path = os.path.join(output_dir, "loo_importance_ranking.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     print(f"Saved: {path}")
