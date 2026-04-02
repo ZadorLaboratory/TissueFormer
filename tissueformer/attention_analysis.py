@@ -781,7 +781,8 @@ def plot_loo_importance_per_label(
 
     for idx, label in enumerate(labels):
         ax = axes[idx // ncols][idx % ncols]
-        subset = summary_df[summary_df["label"] == label].nlargest(top_k, "mean_loss_increase")
+        subset = summary_df[summary_df["label"] == label].dropna(subset=["cell_type", "mean_loss_increase"])
+        subset = subset.nlargest(top_k, "mean_loss_increase")
         cell_types = subset["cell_type"].values[::-1]
         means = subset["mean_loss_increase"].values[::-1]
         sem_vals = subset["sem"].values[::-1] if "sem" in subset.columns else None
