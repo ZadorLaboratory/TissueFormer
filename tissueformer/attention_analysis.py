@@ -737,7 +737,7 @@ def plot_loo_importance_ranking(
         ax.axhline(y=0, color="k", linewidth=0.5, alpha=0.5)
         ax.set_ylabel("Mean cross-entropy\nloss increase", fontsize=12)
         ax.tick_params(axis="x", labelsize=10)
-        plt.setp(ax.get_xticklabels(), rotation=15, ha="right")
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     else:
         ax.barh(overall_mean.index, overall_mean.values, xerr=overall_sem.values, capsize=2, color=colors)
         ax.axvline(x=0, color="k", linewidth=0.5, alpha=0.5)
