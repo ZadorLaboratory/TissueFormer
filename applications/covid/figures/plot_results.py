@@ -11,6 +11,7 @@ import os
 import argparse
 
 import pandas as pd
+from scipy import stats
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -489,6 +490,97 @@ def save_results_csv(tf_df, bench_df, output_dir):
     print(f"Saved {csv_path} ({len(csv_df)} rows)")
 
 
+def print_significance_table(tf_df, bench_df):
+    """Print whether TissueFormer is significantly different from each benchmark.
+
+    Uses a paired Wilcoxon signed-rank test across CV folds at matched group sizes.
+    For each (dataset, method), compares at TF's best group_size.
+    """
+    tf_key = "test/balanced_accuracy"
+    bench_suffix = "group_balanced_accuracy"
+    all_bench = {**CLASSICAL_METHODS, **DL_METHODS}
+
+    rows = []
+    for dataset in DATASETS:
+        tf_ds = tf_df[tf_df["dataset_name"] == dataset]
+
+        # Collect TF values at gs="all", keyed by cv_fold
+        if tf_key not in tf_ds.columns or "data.cv_fold" not in tf_ds.columns:
+            continue
+        subset = tf_ds[["data.group_size", "data.cv_fold", tf_key]].dropna()
+        gs_all = subset[subset["data.group_size"] == "all"].copy()
+        gs_all["data.cv_fold"] = pd.to_numeric(gs_all["data.cv_fold"]).astype(int)
+        tf_fold_vals = {}
+        for _, row in gs_all.iterrows():
+            tf_fold_vals[int(row["data.cv_fold"])] = float(row[tf_key])
+
+        if not tf_fold_vals:
+            continue
+        tf_best_gs = "all"
+        tf_best_mean = sum(tf_fold_vals.values()) / len(tf_fold_vals)
+
+        bench_ds = bench_df[bench_df["dataset_name"] == dataset]
+
+        for method_key, mstyle in all_bench.items():
+            # Get benchmark values at TF's best group_size, keyed by cv_fold
+            col = _build_benchmark_col_name(method_key, tf_best_gs, bench_suffix)
+            if col not in bench_ds.columns or "data.cv_fold" not in bench_ds.columns:
+                continue
+            bench_fold_vals = {}
+            for _, row in bench_ds.iterrows():
+                val = pd.to_numeric(row.get(col), errors="coerce")
+                fold = pd.to_numeric(row.get("data.cv_fold"), errors="coerce")
+                if pd.notna(val) and pd.notna(fold):
+                    bench_fold_vals[int(fold)] = float(val)
+
+            if not bench_fold_vals:
+                continue
+
+            # Pair by matching cv_fold
+            shared_folds = sorted(set(tf_fold_vals) & set(bench_fold_vals))
+            if len(shared_folds) < 2:
+                continue
+            tf_paired = [tf_fold_vals[f] for f in shared_folds]
+            bench_paired = [bench_fold_vals[f] for f in shared_folds]
+            n = len(shared_folds)
+            bench_mean = sum(bench_paired) / n
+
+            # Wilcoxon signed-rank test (paired, non-parametric)
+            if n >= 5:
+                try:
+                    w_stat, p_val = stats.wilcoxon(tf_paired, bench_paired, alternative="two-sided")
+                except ValueError:
+                    p_val = 1.0
+            else:
+                t_stat, p_val = stats.ttest_rel(tf_paired, bench_paired)
+
+            sig = ""
+            if p_val < 0.001:
+                sig = "***"
+            elif p_val < 0.01:
+                sig = "**"
+            elif p_val < 0.05:
+                sig = "*"
+
+            rows.append({
+                "Dataset": DATASET_LABELS[dataset].replace("\n", ""),
+                "Method": mstyle["label"],
+                "TF mean": f"{tf_best_mean:.3f}",
+                "Method mean": f"{bench_mean:.3f}",
+                "gs": tf_best_gs,
+                "n_folds": n,
+                "folds": ",".join(str(f) for f in shared_folds),
+                "Δ": f"{tf_best_mean - bench_mean:+.3f}",
+                "p-value": f"{p_val:.4f}",
+                "Sig": sig,
+            })
+
+    sig_df = pd.DataFrame(rows)
+    print("\n=== TissueFormer vs. Benchmarks (Balanced Accuracy, paired at TF's best group_size) ===")
+    print(sig_df.to_string(index=False))
+    print("Sig: * p<0.05, ** p<0.01, *** p<0.001 (Wilcoxon signed-rank if n≥5, else paired t-test)\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot COVID severity results from wandb")
     parser.add_argument("--entity", type=str, default="zadorlab",
@@ -525,6 +617,7 @@ def main():
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     save_results_csv(tf_df, bench_df, script_dir)
+    print_significance_table(tf_df, bench_df)
 
     plot_accuracy_auroc_vs_groupsize(tf_df, bench_df, args.output_dir, args.benchmark_type,
                                      sharex=not args.no_sharex,
