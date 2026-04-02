@@ -48,9 +48,10 @@ def load_color_map():
 
 
 def save_fig(fig, name, output_dir):
-    path = os.path.join(output_dir, f"{name}.pdf")
-    fig.savefig(path, bbox_inches="tight")
-    print(f"Saved: {path}")
+    for ext in ("pdf", "png"):
+        path = os.path.join(output_dir, f"{name}.{ext}")
+        fig.savefig(path, dpi=150, bbox_inches="tight")
+        print(f"Saved: {path}")
     import matplotlib.pyplot as plt
     plt.close(fig)
 
