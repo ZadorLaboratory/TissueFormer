@@ -18,8 +18,8 @@ mpl.rcParams.update({
     "font.size": 22,
     "axes.titlesize": 24,
     "axes.labelsize": 22,
-    "xtick.labelsize": 20,
-    "ytick.labelsize": 20,
+    "xtick.labelsize": 22,
+    "ytick.labelsize": 14,
 })
 
 from tissueformer.attention_analysis import (
