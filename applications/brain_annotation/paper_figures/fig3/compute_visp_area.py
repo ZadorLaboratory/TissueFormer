@@ -40,6 +40,11 @@ CONTROL_BRAINS = {
 ENUCLEATED_ANIMALS = ["D077", "D078", "D079"]
 ENUCLEATED_DISPLAY = {"D077": "D077_2L", "D078": "D078_2L", "D079": "D079_4L"}
 
+# D076_4L was predicted separately via predict_single_brain.py
+D076_4L_PREDICTION_DIR = os.path.join(
+    os.path.dirname(__file__), "..", "..", "prediction_output"
+)
+
 
 def load_control_coords_and_models():
     """Load reflected coordinates and saved SVC models for each control brain."""
@@ -119,6 +124,40 @@ def load_enucleated_coords_and_fit_models():
         }
 
     return brains
+
+
+def load_d076_4l():
+    """Load D076_4L predictions from the single-brain pipeline and fit SVC."""
+    from datasets import load_from_disk
+    from cuml.svm import SVC
+
+    pred_path = os.path.join(D076_4L_PREDICTION_DIR, "predictions.npy")
+    dataset_path = os.path.join(D076_4L_PREDICTION_DIR, "tokenized.dataset")
+
+    pred_dict = np.load(pred_path, allow_pickle=True).item()
+    dataset = load_from_disk(dataset_path)
+
+    predictions = pred_dict["predictions"]
+    indices = np.array(pred_dict["indices"])  # (n_groups, group_size)
+    all_ccf = np.array(dataset["CCF_streamlines"])
+
+    # Average coordinates across each group
+    group_ccf = all_ccf[indices]  # (n_groups, group_size, 3)
+    ccf_mean = np.nanmean(group_ccf, axis=1)  # (n_groups, 3)
+
+    xy = reflect_points_to_left(ccf_mean[:, :2])
+
+    print(f"  Fitting SVC for D076_4L: {len(predictions)} groups...")
+    xy_f32 = xy.astype(np.float32)
+    svc = SVC(kernel="rbf", gamma=SVC_GAMMA, C=SVC_C)
+    with SuppressOutput():
+        svc.fit(xy_f32, predictions.astype(np.float32))
+
+    return {"D076_4L": {
+        "condition": "enucleated",
+        "model": svc,
+        "xy": xy,
+    }}
 
 
 def compute_shared_grid(all_brains):
@@ -252,7 +291,10 @@ def main():
     print("Loading enucleated brains...")
     enucleated_brains = load_enucleated_coords_and_fit_models()
 
-    all_brains = {**control_brains, **enucleated_brains}
+    print("Loading D076_4L...")
+    d076_4l = load_d076_4l()
+
+    all_brains = {**control_brains, **enucleated_brains, **d076_4l}
 
     print("Computing shared grid...")
     X_grid, xx0, xx1, bounds = compute_shared_grid(all_brains)
