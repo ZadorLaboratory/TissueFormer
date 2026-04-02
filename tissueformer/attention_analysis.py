@@ -735,7 +735,7 @@ def plot_loo_importance_ranking(
         overall_sem = overall_sem.reindex(overall_mean.index)
         ax.bar(overall_mean.index, overall_mean.values, yerr=overall_sem.values, capsize=2, color=colors)
         ax.axhline(y=0, color="k", linewidth=0.5, alpha=0.5)
-        ax.set_ylabel("Mean cross-entropy\nloss increase", fontsize=12)
+        ax.set_ylabel("Mean cross-entropy\nloss increase")
         ax.tick_params(axis="x", labelsize=10)
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     else:
@@ -743,7 +743,7 @@ def plot_loo_importance_ranking(
         ax.axvline(x=0, color="k", linewidth=0.5, alpha=0.5)
         ax.set_xlabel("Mean cross-entropy loss increase when dropped")
         ax.tick_params(axis="y", labelsize=8)
-    ax.set_title(f"Top {top_k} cell types by LOO importance", fontsize=13)
+    ax.set_title(f"Top {top_k} cell types by LOO importance")
     fig.tight_layout()
     return fig
 
