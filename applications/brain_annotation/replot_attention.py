@@ -15,11 +15,11 @@ import matplotlib as mpl
 import pandas as pd
 
 mpl.rcParams.update({
-    "font.size": 18,
-    "axes.titlesize": 20,
-    "axes.labelsize": 18,
-    "xtick.labelsize": 16,
-    "ytick.labelsize": 16,
+    "font.size": 22,
+    "axes.titlesize": 24,
+    "axes.labelsize": 22,
+    "xtick.labelsize": 20,
+    "ytick.labelsize": 20,
 })
 
 from tissueformer.attention_analysis import (
