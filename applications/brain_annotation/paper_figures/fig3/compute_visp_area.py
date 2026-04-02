@@ -217,7 +217,7 @@ def compute_visp_areas(all_brains, X_grid, pixel_area_per_point):
 
 
 def plot_visp_comparison(df):
-    """Two-column strip plot with individual points, means, and t-test significance bracket."""
+    """Paired strip plot with lines connecting littermates, means, and paired t-test."""
     from scipy import stats
 
     plt.rcParams.update({
@@ -232,27 +232,40 @@ def plot_visp_comparison(df):
     fig, ax = plt.subplots(figsize=(3.5, 4.5))
 
     colors = {"control": "#4878CF", "enucleated": "#E24A33"}
-    x_positions = {"control": 0, "enucleated": 1}
+    x_ctrl, x_enuc = 0, 1
 
-    ctrl_vals = df[df["condition"] == "control"]["visp_area"].values
-    enuc_vals = df[df["condition"] == "enucleated"]["visp_area"].values
+    # Extract litter from brain name (e.g. "D076_1L" -> "D076")
+    df = df.copy()
+    df["litter"] = df["brain"].str[:4]
 
-    # Individual points with jitter
-    rng = np.random.default_rng(42)
-    for condition, vals in [("control", ctrl_vals), ("enucleated", enuc_vals)]:
-        x_base = x_positions[condition]
-        jitter = rng.uniform(-0.08, 0.08, size=len(vals))
-        ax.scatter(
-            np.full(len(vals), x_base) + jitter, vals,
-            color=colors[condition], s=50, zorder=3, edgecolors="black", linewidths=0.5,
-        )
-        # Mean bar
-        ax.hlines(vals.mean(), x_base - 0.15, x_base + 0.15,
-                  color="black", linewidth=2, zorder=4)
+    # Get paired values by litter
+    ctrl_df = df[df["condition"] == "control"].set_index("litter")
+    enuc_df = df[df["condition"] == "enucleated"].set_index("litter")
+    litters = sorted(ctrl_df.index.intersection(enuc_df.index))
 
-    # T-test
-    t_stat, p_val = stats.ttest_ind(ctrl_vals, enuc_vals)
-    print(f"  t-test: t={t_stat:.3f}, p={p_val:.4f}")
+    ctrl_vals = ctrl_df.loc[litters, "visp_area"].values
+    enuc_vals = enuc_df.loc[litters, "visp_area"].values
+
+    # Draw connecting lines between littermates
+    for c_val, e_val in zip(ctrl_vals, enuc_vals):
+        ax.plot([x_ctrl, x_enuc], [c_val, e_val],
+                color="gray", linewidth=0.8, zorder=2, alpha=0.6)
+
+    # Individual points (no jitter — paired lines need fixed x)
+    ax.scatter(np.full(len(ctrl_vals), x_ctrl), ctrl_vals,
+               color=colors["control"], s=50, zorder=3, edgecolors="black", linewidths=0.5)
+    ax.scatter(np.full(len(enuc_vals), x_enuc), enuc_vals,
+               color=colors["enucleated"], s=50, zorder=3, edgecolors="black", linewidths=0.5)
+
+    # Mean bars
+    ax.hlines(ctrl_vals.mean(), x_ctrl - 0.15, x_ctrl + 0.15,
+              color="black", linewidth=2, zorder=4)
+    ax.hlines(enuc_vals.mean(), x_enuc - 0.15, x_enuc + 0.15,
+              color="black", linewidth=2, zorder=4)
+
+    # Paired t-test
+    t_stat, p_val = stats.ttest_rel(ctrl_vals, enuc_vals)
+    print(f"  paired t-test: t={t_stat:.3f}, p={p_val:.4f}")
 
     # Significance bracket
     y_max = df["visp_area"].max()
