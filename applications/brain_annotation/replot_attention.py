@@ -11,7 +11,16 @@ import os
 import sys
 
 import anndata as ad
+import matplotlib as mpl
 import pandas as pd
+
+mpl.rcParams.update({
+    "font.size": 14,
+    "axes.titlesize": 16,
+    "axes.labelsize": 14,
+    "xtick.labelsize": 12,
+    "ytick.labelsize": 12,
+})
 
 from tissueformer.attention_analysis import (
     plot_attention_per_label,
@@ -39,8 +48,8 @@ def load_color_map():
 
 
 def save_fig(fig, name, output_dir):
-    path = os.path.join(output_dir, f"{name}.png")
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    path = os.path.join(output_dir, f"{name}.pdf")
+    fig.savefig(path, bbox_inches="tight")
     print(f"Saved: {path}")
     import matplotlib.pyplot as plt
     plt.close(fig)
