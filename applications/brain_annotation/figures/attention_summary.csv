@@ -1,0 +1,1059 @@
+label,cell_type,mean_attention,sem,count
+Gustatory areas,Unclear,0.129828453064,0.0141754396872,3
+"Primary somatosensory area, trunk",TR,0.119398117065,0.0,1
+"Retrosplenial area, lateral agranular part",Unclear,0.114374876022,0.0319388536829,4
+Posterior auditory area,Unclear,0.103116989136,0.0,1
+"Retrosplenial area, lateral agranular part",PPP,0.0984076976776,0.0243317543278,15
+Posterior auditory area,NP PPP/RSP,0.0968189239502,0.0,1
+Anteromedial visual area,TR,0.0946407318115,0.0,1
+Anterolateral visual area,ENT DL,0.0942194312811,0.0366740101917,8
+"Retrosplenial area, lateral agranular part",ENT L6b,0.0922267436981,0.0306195693445,4
+Ectorhinal area,BLA/BMA/PA,0.085075548717,0.0292753998461,7
+Infralimbic area,L6 IT,0.0847760836283,0.0521076157456,3
+Anteromedial visual area,HIP CA3,0.0833888053894,0.00650453567505,2
+Anterior area,RSP/ACA ML,0.0793334643046,0.0238773214127,3
+Primary visual area,ENT UL,0.079174041748,0.0,1
+"Primary somatosensory area, mouth",L5 ET,0.0747087429962,0.00211471998183,529
+Secondary motor area,PPP,0.0739598274231,0.0198470829112,5
+Posterior auditory area,ENT L6b,0.0729608535767,0.0,1
+Anterior area,RSP/ACA UL,0.0729088068008,0.0371139619652,5
+Primary visual area,LA,0.0722551345825,0.00978708267212,2
+Perirhinal area,NP PPP/RSP,0.0720567703247,0.0,1
+Primary auditory area,AON,0.071400642395,0.0,1
+"Agranular insular area, posterior part",BA,0.0713062286377,0.0,1
+Lateral visual area,Unclear,0.0712313652039,0.0415768623352,2
+"Primary somatosensory area, nose",COA,0.0701656341553,0.0,1
+"Primary somatosensory area, barrel field",ENT DL,0.0691967010498,0.0,1
+Ectorhinal area,LA,0.068829536438,0.0,1
+"Retrosplenial area, dorsal part",AON,0.0685729980469,0.0,1
+Posterolateral visual area,L6b,0.068511750963,0.0117592065617,9
+Lateral visual area,ENT DL,0.0677103847265,0.0157849189121,8
+Posterolateral visual area,Unclear,0.0669457117716,0.00516042449988,3
+Posterolateral visual area,ENT L6b,0.0663905620575,0.00961206507732,10
+"Retrosplenial area, lateral agranular part",BLA/BMA/PA,0.0661053316934,0.0399779563908,7
+Laterointermediate area,AON,0.0655765533447,0.0,1
+"Agranular insular area, posterior part",ENT ML,0.0642206867536,0.039925211358,3
+Temporal association areas,NP PPP/RSP,0.0636835098267,0.0,1
+Dorsal auditory area,ENT DL,0.0633815526962,0.0412609165351,3
+Lateral visual area,BLA/BMA/PA,0.0630736351013,0.0380530357361,2
+Laterointermediate area,L6 IT,0.062697557842,0.00436387823533,102
+Visceral area,ENT DL,0.0625281958161,0.0030881601805,148
+Posterior auditory area,ENT DL,0.0620410442352,0.00703549168547,30
+Perirhinal area,Car3,0.0619193315506,0.0445431470871,2
+Postrhinal area,ENT DL,0.0612794245992,0.00306432071868,168
+Anterolateral visual area,L6 IT,0.0612249281257,0.00289360758312,336
+Perirhinal area,HIP CA1,0.0591192245483,0.00777530670166,2
+Dorsal auditory area,L6 IT,0.0586187937043,0.00207482809205,440
+Posterior auditory area,L6b,0.0577553659678,0.0107268400395,24
+Laterointermediate area,RSP/ACA UL,0.0570959448814,0.0401235222816,2
+"Retrosplenial area, ventral part",Car3,0.0570251941681,0.0121034245988,6
+Posterior auditory area,L6 IT,0.056159580946,0.00440287332292,100
+Visceral area,L2/3 IT,0.0550767506162,0.0015795211519,708
+Secondary motor area,Unclear,0.0550290346146,0.0475414991379,2
+Anteromedial visual area,L6b/CT,0.0549249649048,0.0094664695674,4
+"Retrosplenial area, ventral part",L6b/CT,0.0548583030701,0.00728577642317,5
+Primary visual area,ENT L6b,0.0548230171204,0.0081352757549,10
+Temporal association areas,ENT DL,0.0543894632363,0.00165401235442,405
+Gustatory areas,ENT DL,0.0542726285996,0.0066215027694,31
+Primary auditory area,L6 IT,0.0537950724311,0.00152770708481,571
+"Primary somatosensory area, barrel field",ENT UL,0.0537861585617,0.0369101762772,2
+Anterior area,ENT DL,0.0536271731059,0.0099208106618,9
+Lateral visual area,L6b/CT,0.0534391701221,0.0117715618137,8
+Laterointermediate area,ENT DL,0.0533536076546,0.0128216939334,14
+Postrhinal area,BLAa,0.0531994819641,0.0114690805004,5
+Infralimbic area,L6b/CT,0.0528545379639,0.0,1
+Ventral auditory area,L6 IT,0.0523076215668,0.00185975207719,307
+Ventral auditory area,ENT DL,0.0522208232579,0.00307186752315,127
+Postrhinal area,L6 IT,0.0513040973294,0.00277795126268,155
+Laterointermediate area,L6b/CT,0.0511813402176,0.00917865918297,10
+"Retrosplenial area, lateral agranular part",L6b/CT,0.0511083669133,0.0189807086662,18
+"Primary somatosensory area, unassigned",L5 ET,0.0510969809065,0.00268157361065,146
+Ectorhinal area,ENT DL,0.0510354395829,0.0021680391111,294
+Perirhinal area,L6 IT,0.0509524345398,0.00218152999878,2
+"Primary somatosensory area, nose",L5 ET,0.050819359838,0.00200206348958,252
+Cortical subplate,L2/3 IT,0.0506811518418,0.00470251172839,38
+Supplemental somatosensory area,ENT DL,0.0505698919296,0.00758876027804,4
+"Primary somatosensory area, lower limb",ENT UL,0.0504999756813,0.0359324812889,2
+"Anterior cingulate area, ventral part",PPP,0.0502028942108,0.0133854371743,5
+Visceral area,L6 IT,0.050061100453,0.00195662752978,311
+"Primary somatosensory area, lower limb",ENT ML,0.0499694262232,0.0105793052575,7
+Infralimbic area,L4/5 IT,0.0498332977295,0.0,1
+posteromedial visual area,L6b/CT,0.0497553745906,0.0106333733403,6
+Prelimbic area,L6b,0.0496196746826,0.01758140958,3
+Anterolateral visual area,AON,0.0494756698608,0.0,1
+Anteromedial visual area,Low quality,0.0492798487345,0.0239480900794,3
+"Agranular insular area, dorsal part",TT,0.0492677688599,0.0195245742798,2
+"Agranular insular area, posterior part",ENT DL,0.0492096856788,0.00180077480106,270
+Gustatory areas,BLA/BMA/PA,0.049173116684,0.00932617114957,6
+Primary auditory area,ENT DL,0.0489767723613,0.00557334026223,27
+Ectorhinal area,ENT L6b,0.0486974716187,0.00344457176074,103
+Dorsal auditory area,L6b/CT,0.0486965924501,0.00853124944622,16
+Rostrolateral visual area,AON,0.0485532283783,0.0175983905792,2
+"Retrosplenial area, lateral agranular part",HIP CA3,0.0483652353287,0.012802689367,8
+Visceral area,L5 IT,0.048325202814,0.00266491728395,164
+"Primary somatosensory area, upper limb",L5 ET,0.0482133065483,0.00167247389906,448
+Ventral auditory area,EPd,0.0481834597886,0.00585410623983,32
+Posterolateral visual area,L6b/CT,0.048179602623,0.0162464372239,5
+posteromedial visual area,TR,0.0481583118439,0.0104481771365,5
+"Agranular insular area, posterior part",BLAa,0.0481478691101,0.0245525348892,5
+"Agranular insular area, ventral part",L2/3 IT,0.047769644986,0.00281459163654,138
+Postrhinal area,L6b,0.0473971802153,0.00257587529833,152
+Anteromedial visual area,ENT DL,0.0473538426792,0.00627701560946,17
+"Anterior cingulate area, dorsal part",ENT DL,0.047335767746,0.00301220869524,70
+Perirhinal area,L5 IT,0.0472693443298,0.0173363253166,5
+"Agranular insular area, posterior part",AON,0.0471887812018,0.0197593924229,8
+"Primary somatosensory area, trunk",Car3,0.047003030777,0.0143783092499,2
+"Agranular insular area, posterior part",L5 IT,0.0467085219049,0.00293402750161,77
+Secondary motor area,RSP/ACA UL,0.0467024462183,0.00162452350867,179
+Ventral auditory area,TR,0.0465985834599,0.0179968796369,4
+Lateral visual area,L6 IT,0.0465389772885,0.00185904132244,449
+"Primary somatosensory area, trunk",PIR UL,0.0463891347249,0.0137469365832,15
+Supplemental somatosensory area,L6 IT,0.0462286625802,0.00086880710191,1667
+Temporal association areas,L6 IT,0.0460418814963,0.00259142566514,176
+"Agranular insular area, dorsal part",L2/3 IT,0.0459090919316,0.00104593088114,588
+Ectorhinal area,L6 CT,0.0456909977871,0.0083362532647,23
+"Retrosplenial area, ventral part",HIP SUB,0.0455719360283,0.00641328761952,28
+Secondary motor area,PIR UL,0.0455119132996,0.00533979546862,10
+"Primary somatosensory area, unassigned",L4/5 IT,0.0453889818592,0.00110356825936,1310
+"Primary somatosensory area, barrel field",Car3,0.0453868325537,0.00142550633891,538
+posteromedial visual area,RSP/ACA ML,0.0452914021232,0.00712892717643,33
+Primary motor area,BLAa,0.0452655951182,0.0160183474853,3
+"Primary somatosensory area, trunk",Low quality,0.0450790325801,0.0191870746993,6
+Secondary motor area,L2/3 IT,0.0450746965914,0.000466707428797,2312
+Visceral area,ENT L6b,0.0450377563636,0.0209533689846,3
+Lateral visual area,L5 IT,0.0450335843306,0.00204378200102,306
+"Primary somatosensory area, nose",PG,0.0450148284435,0.0146149850148,8
+Cortical subplate,Low quality,0.0449590682983,0.00329986990619,3
+Postrhinal area,ENT L6b,0.044946480279,0.00266659742398,99
+Primary visual area,L6b/CT,0.0448464353879,0.00559164435078,42
+Lateral visual area,ENT ML,0.0447857325727,0.0155531038591,11
+Rostrolateral visual area,ENT ML,0.0446731448174,0.0173179134518,4
+Laterointermediate area,L6b,0.0445006435568,0.00829303118357,22
+Secondary motor area,Car3,0.0444428126017,0.00678751145353,3
+Primary motor area,ENT ML,0.0443674137718,0.00769736052822,19
+Visceral area,L6 CT,0.044330575934,0.00156701377431,372
+"Retrosplenial area, lateral agranular part",Low quality,0.0443066572639,0.00389997699734,142
+Perirhinal area,ENT L6b,0.0442018725655,0.00764578931604,11
+"Agranular insular area, dorsal part",ENT DL,0.0440011169396,0.00144471637686,255
+Posterior auditory area,EPd,0.0439453721046,0.0149929034373,4
+"Anterior cingulate area, dorsal part",EPd,0.04385693868,0.0089855195835,3
+Perirhinal area,L6b/CT,0.0437316894531,0.00172328948975,2
+posteromedial visual area,ENT DL,0.043677493378,0.00701262995159,27
+"Retrosplenial area, ventral part",L6b,0.0435776771125,0.00341003359399,59
+Primary motor area,L5 ET,0.0435213530725,0.000854907488535,1063
+Lateral visual area,ENT L6b,0.0434556007385,0.0154110013975,3
+posteromedial visual area,ENT ML,0.0433668749673,0.01451912349,7
+"Anterior cingulate area, ventral part",BLAa,0.0433265295896,0.00712316951705,22
+"Anterior cingulate area, ventral part",HIP CA1,0.0431649684906,0.00687898375478,4
+"Agranular insular area, dorsal part",L4/5 IT,0.0430993921243,0.0011125205668,413
+Lateral visual area,L6b,0.0429086287816,0.00367982022994,93
+"Primary somatosensory area, mouth",Car3,0.042850662555,0.00319782952501,140
+"Primary somatosensory area, trunk",TT,0.0427198410034,0.00404644012451,2
+Cortical subplate,L4/5 IT,0.0426914691925,0.00646102499263,17
+"Retrosplenial area, ventral part",ENT ML,0.0426827430725,0.00739325013459,5
+Secondary motor area,AON,0.0426609516144,0.0112072109643,5
+Primary visual area,L5 IT,0.0425697919195,0.000889363268312,1222
+Postrhinal area,L5 IT,0.0425533294678,0.00274155472224,100
+Anteromedial visual area,Car3,0.0424561500549,0.0168009668722,3
+Lateral visual area,PG,0.0424494743347,0.0,1
+"Retrosplenial area, dorsal part",RSP/ACA UL,0.0424307146183,0.000497700768736,2661
+Anterolateral visual area,ENT ML,0.04241391023,0.0154066022766,9
+Ectorhinal area,L6 IT,0.0424123174614,0.00484693237297,54
+"Agranular insular area, posterior part",L2/3 IT,0.0421230298525,0.00108296285305,757
+Postrhinal area,AON,0.0421144962311,0.0073926448822,2
+Perirhinal area,L6b,0.0420462608337,0.00505467342397,5
+"Primary somatosensory area, nose",Car3,0.0420254944222,0.00152054218233,311
+Anteromedial visual area,RSP/ACA UL,0.0420235303732,0.00829616455994,13
+"Anterior cingulate area, ventral part",Car3,0.0419795513153,0.00495743751526,2
+"Retrosplenial area, ventral part",L6 CT,0.0419708089957,0.00120439028833,521
+"Retrosplenial area, lateral agranular part",ENT ML,0.0419477522373,0.00843057754033,16
+Postrhinal area,L6b/CT,0.0419188805165,0.00259990272588,93
+"Anterior cingulate area, dorsal part",L5 IT,0.0418809347095,0.000912171522844,496
+Postrhinal area,NP PPP/RSP,0.0417229533195,0.00606703698339,8
+"Agranular insular area, dorsal part",COA,0.0416960716248,0.0104178090809,3
+Secondary motor area,L5 IT,0.0416158346616,0.000478590617526,1485
+Primary motor area,L4/5 IT,0.0413721390641,0.000430824863035,3581
+"Primary somatosensory area, mouth",L4/5 IT,0.0413045135708,0.000414115353172,6455
+Temporal association areas,PIR UL,0.0412931442261,0.00683314494926,5
+"Agranular insular area, posterior part",Unclear,0.041282872359,0.0114089379095,6
+"Retrosplenial area, dorsal part",L5 ET,0.0411100159971,0.00094320826002,1058
+"Agranular insular area, ventral part",L6b,0.0411059164232,0.00391081569293,31
+Ectorhinal area,L5 IT,0.0410955205279,0.0034413959021,53
+Posterolateral visual area,PIR UL,0.0410655021667,0.00398981158023,5
+Primary visual area,ENT DL,0.0409987679234,0.00419093353559,54
+Posterolateral visual area,HIP SUB,0.0409461259842,0.012558378082,6
+Anterior area,L6 IT,0.0408828004489,0.00172805925176,359
+Perirhinal area,ENT DL,0.0408594210943,0.00423914383353,36
+posteromedial visual area,RSP/ACA UL,0.0408567147596,0.00565415247404,28
+"Primary somatosensory area, nose",AON,0.0408378005028,0.0136271925855,5
+Cortical subplate,L6 CT,0.0407524975863,0.0109384280211,11
+"Primary somatosensory area, upper limb",AON,0.0406506856283,0.0266769749221,3
+Ventral auditory area,BLA/BMA/PA,0.0406169891357,0.0,1
+Gustatory areas,L2/3 IT,0.0406108156256,0.00113821346997,582
+Visceral area,BLAa,0.040590763092,0.0243615372684,4
+posteromedial visual area,Car3,0.0404416799545,0.0100024000818,5
+Supplemental somatosensory area,L5 ET,0.0403820944212,0.00132325987245,487
+Posterolateral visual area,L6 IT,0.0400184942328,0.00195171431353,115
+Secondary motor area,L4/5 IT,0.0400151650832,0.000508492990983,1267
+Primary visual area,COA,0.0399344989232,0.011356717589,7
+"Primary somatosensory area, trunk",ENT DL,0.0399265289307,0.0,1
+Rostrolateral visual area,L6 IT,0.0399127788508,0.00195584713445,335
+Dorsal auditory area,L4/5 IT,0.0398549960828,0.00102771940774,1098
+Primary visual area,RSP/ACA ML,0.0398426737104,0.0095802004599,14
+"Retrosplenial area, lateral agranular part",NP PPP/RSP,0.0398080674085,0.00627232435264,22
+Rostrolateral visual area,L5 IT,0.0397596500195,0.00203212710893,277
+Anterolateral visual area,L6b/CT,0.0397444963455,0.00881382989392,9
+posteromedial visual area,L6 IT,0.0396691672394,0.00211061701454,339
+Temporal association areas,ENT L6b,0.0396132367723,0.00379491716724,47
+Prelimbic area,ENT DL,0.039529800415,0.0,1
+Primary visual area,EPd,0.039508711208,0.00805705427063,11
+"Agranular insular area, dorsal part",AON,0.0394630432129,0.0,1
+Primary motor area,ENT DL,0.0394589175349,0.00282888993796,46
+"Agranular insular area, ventral part",L4/5 IT,0.0394516137181,0.0027025436972,49
+Dorsal auditory area,AON,0.0393543243408,0.0,1
+"Primary somatosensory area, barrel field",L5 ET,0.0392516034621,0.00096505291458,837
+Anterior area,ENT ML,0.0391689538956,0.0109579450949,6
+Secondary motor area,RSP/ACA ML,0.0391321297988,0.00153434009625,103
+Gustatory areas,L5 ET,0.0391284171492,0.00193948132184,160
+"Anterior cingulate area, ventral part",L6b,0.0391188973472,0.00324124290793,63
+"Primary somatosensory area, trunk",ENT ML,0.0390758514404,0.00548279371698,6
+Laterointermediate area,L5 IT,0.0390185336523,0.00223297499836,158
+"Agranular insular area, ventral part",ENT DL,0.0389971208572,0.00285417734833,50
+Primary visual area,PPP,0.0389355818431,0.0170396873524,6
+"Anterior cingulate area, dorsal part",L2/3 IT,0.038846736526,0.000650502385013,759
+Primary visual area,L6b,0.0388395249421,0.00199751263402,282
+"Anterior cingulate area, dorsal part",RSP/ACA UL,0.0387031637853,0.00102076118985,248
+Primary auditory area,L6b/CT,0.0386980889273,0.00289524041168,61
+"Primary somatosensory area, upper limb",L4/5 IT,0.0386942426394,0.000626833825142,3227
+"Primary somatosensory area, mouth",L5 IT,0.038690399228,0.00101986083376,792
+posteromedial visual area,PPP,0.0386390686035,0.0157415421689,3
+Anteromedial visual area,L5 IT,0.0386356483407,0.00118990661541,434
+"Retrosplenial area, ventral part",HIP CA3,0.0385873317719,0.007090659735,5
+Primary visual area,PIR UL,0.0385611790877,0.00507707075827,39
+posteromedial visual area,L5 IT,0.0385338864393,0.00133253835743,360
+"Primary somatosensory area, trunk",L4/5 IT,0.0384680574809,0.000782983985979,994
+Anterolateral visual area,L5 IT,0.0384329865087,0.00197405113479,309
+Anteromedial visual area,L2/3 IT,0.0384277482166,0.00125141510151,571
+"Primary somatosensory area, upper limb",L6 CT,0.0384204141165,0.000850014025982,2010
+"Anterior cingulate area, ventral part",L5 IT,0.03836614745,0.00130162065249,147
+"Primary somatosensory area, barrel field",L4/5 IT,0.0383557881631,0.00033448794824,7394
+posteromedial visual area,HIP CA1,0.0383410453796,0.0,1
+Visceral area,NP PPP/RSP,0.0383014678955,0.0,1
+Ventral auditory area,L2/3 IT,0.0382653956115,0.000737811760351,1200
+Infralimbic area,ENT DL,0.0381505489349,0.00599707925247,4
+"Agranular insular area, ventral part",L6 IT,0.0381440839906,0.00225100972723,69
+"Anterior cingulate area, ventral part",BLA/BMA/PA,0.03812011966,0.00415882045126,27
+"Primary somatosensory area, nose",L4/5 IT,0.0380693962154,0.000501760502155,3113
+"Agranular insular area, dorsal part",L6 IT,0.0379706347068,0.00102798208414,598
+"Primary somatosensory area, nose",L6 CT,0.0379445890334,0.000733017279061,1502
+Anteromedial visual area,RSP/ACA ML,0.0379382748353,0.00557609543051,19
+Primary motor area,L2/3 IT,0.0379096746765,0.00029719993713,5204
+Anterolateral visual area,L6b,0.0378900558139,0.00408688044373,78
+Prelimbic area,L5 ET,0.0378274917603,0.0,1
+Rostrolateral visual area,L4/5 IT,0.0378236828451,0.00104995833934,969
+Ectorhinal area,COA,0.03775873551,0.00580539144194,13
+Cortical subplate,TR,0.0377371311188,0.0163590908051,2
+Supplemental somatosensory area,RSP/ACA ML,0.037730050087,0.0172805678306,5
+"Agranular insular area, posterior part",PIR UL,0.0376708399166,0.0133577927096,11
+Primary visual area,HIP SUB,0.03759765625,0.0,1
+Ventral auditory area,PIR UL,0.0375361075768,0.00987967151588,13
+Posterior auditory area,L5 IT,0.0374259259074,0.0023227790778,156
+Temporal association areas,L6 CT,0.0373783238818,0.00239815015787,178
+Perirhinal area,ENT ML,0.0373499227125,0.00161045598182,86
+"Primary somatosensory area, barrel field",L6 IT,0.0373096102877,0.000729711184874,1962
+Ectorhinal area,ENT ML,0.0372969377531,0.00152800094604,146
+Posterolateral visual area,PG,0.0372830629349,0.0256609141328,3
+"Agranular insular area, posterior part",L6 IT,0.0372442058155,0.00295068152846,175
+"Retrosplenial area, dorsal part",ENT L6b,0.0371877806527,0.0031520203985,7
+"Primary somatosensory area, lower limb",L6b/CT,0.0371180971464,0.0103563139802,6
+Lateral visual area,RSP/ACA UL,0.0370798707008,0.017079188539,4
+"Primary somatosensory area, trunk",L6 IT,0.037057974158,0.00128647583688,449
+Gustatory areas,L4/5 IT,0.0370005333832,0.000611668408467,1315
+Cortical subplate,ENT DL,0.0369911988576,0.00567465948291,9
+"Primary somatosensory area, lower limb",Unclear,0.0369899347425,0.0258395866809,4
+Gustatory areas,L6 IT,0.0369053745511,0.00123308706394,495
+Supplemental somatosensory area,TT,0.0368876457214,0.0,1
+Supplemental somatosensory area,L6 CT,0.0368199264329,0.000501213908764,2720
+"Retrosplenial area, lateral agranular part",RSP/ACA UL,0.0368146187051,0.000779192282229,1484
+Postrhinal area,PPP,0.0368049262,0.00179673591613,61
+Supplemental somatosensory area,PG,0.0368002951145,0.00984052177832,8
+"Primary somatosensory area, trunk",RSP/ACA ML,0.03679728508,0.00970768928528,2
+"Orbital area, lateral part",NA,0.0367578322237,0.00875595605669,11
+Primary visual area,L6 IT,0.0367266591559,0.000724289812831,1645
+Supplemental somatosensory area,L4/5 IT,0.0366395239947,0.000346723923125,5789
+Posterior auditory area,L4/5 IT,0.0366258067591,0.0016386989996,418
+posteromedial visual area,L6b,0.0365981770323,0.0044704685788,47
+Postrhinal area,EPd,0.0365020554999,0.00544504201489,23
+Temporal association areas,L5 IT,0.0364958966365,0.00173653398622,183
+"Agranular insular area, dorsal part",Low quality,0.0364868436287,0.00338069131984,67
+"Primary somatosensory area, lower limb",L4/5 IT,0.0364760375869,0.000586539213276,1804
+"Orbital area, ventrolateral part",L2/3 IT,0.0364685058594,0.00202802589604,47
+Primary auditory area,EPd,0.0364452530356,0.00430786917125,34
+"Retrosplenial area, ventral part",ENT L6b,0.0364201545715,0.00709948643292,5
+Primary motor area,AON,0.0362695242677,0.00830844237534,14
+"Agranular insular area, dorsal part",L5 IT,0.0362645780917,0.00204384784855,97
+"Primary somatosensory area, trunk",L6b/CT,0.0361295700073,0.00678791624904,5
+"Orbital area, ventrolateral part",PIR UL,0.0361204147339,0.0,1
+Primary auditory area,L4/5 IT,0.0361121927653,0.000562424395292,2313
+"Primary somatosensory area, mouth",RSP/ACA ML,0.0360987285773,0.026212679708,3
+Ventral auditory area,ENT ML,0.036066558626,0.00968023793928,9
+Anterior area,L2/3 IT,0.0360302967652,0.00069306107116,1324
+Perirhinal area,ENT UL,0.0360109210014,0.00145002277862,68
+Rostrolateral visual area,L6b/CT,0.0358716249466,0.00772531315711,4
+"Primary somatosensory area, lower limb",L6 CT,0.0358119489064,0.000801309277464,1145
+Rostrolateral visual area,L2/3 IT,0.0358014589589,0.000873997502476,1028
+"Retrosplenial area, ventral part",RSP/ACA ML,0.0357733073021,0.000311210589347,3020
+"Retrosplenial area, ventral part",L5 ET,0.0356899209821,0.000574381190218,937
+"Agranular insular area, posterior part",L6 CT,0.0356600679457,0.00430583777166,40
+Posterolateral visual area,ENT UL,0.035556901585,0.00318594109585,11
+Temporal association areas,L2/3 IT,0.0355488713537,0.000671295580042,1461
+Supplemental somatosensory area,COA,0.0355386734009,0.0,1
+"Anterior cingulate area, ventral part",ENT DL,0.0355349268232,0.00160052649813,91
+Anterior area,L4/5 IT,0.0355010595434,0.000913402843161,869
+"Anterior cingulate area, dorsal part",L6b,0.035418034573,0.00153589824657,245
+Rostrolateral visual area,Car3,0.0353898120963,0.00995860075464,23
+Primary auditory area,HIP CA3,0.035304248333,0.0020902612204,8
+Cortical subplate,L6 IT,0.0352152511477,0.00270031370495,48
+Ectorhinal area,BA,0.0351586341858,0.0,1
+"Primary somatosensory area, trunk",L2/3 IT,0.0351192439809,0.000564405810767,1630
+"Primary somatosensory area, lower limb",L5 ET,0.0351043425411,0.00106564594997,415
+Posterolateral visual area,L6 CT,0.0350833531667,0.00164363080493,169
+Gustatory areas,PPP,0.0350661277771,0.0,1
+"Orbital area, lateral part",L6 IT,0.0350343679127,0.00651085041279,19
+Infralimbic area,L2/3 IT,0.0349920121106,0.00370623011824,22
+Ventral auditory area,Unclear,0.0349736213684,0.0,1
+Secondary motor area,L5 ET,0.0349651523751,0.000629473261894,894
+Supplemental somatosensory area,Car3,0.0349446585009,0.000554251193312,2174
+Secondary motor area,ENT ML,0.0348939983933,0.00314422564527,27
+Primary auditory area,L2/3 IT,0.0348217018443,0.000584639803124,1493
+Temporal association areas,Car3,0.0348113866343,0.000933530999636,602
+Primary motor area,PPP,0.0348046183586,0.0059022028807,5
+Ectorhinal area,ENT UL,0.0347514152527,0.00376541225996,8
+"Retrosplenial area, dorsal part",EPd,0.0347254574299,0.00524595131693,8
+Anterior area,L5 IT,0.034712333106,0.00140385154635,443
+Perirhinal area,L2/3 IT,0.034698564247,0.00123068750282,179
+Postrhinal area,L6 CT,0.0346856174655,0.00153230964083,244
+"Anterior cingulate area, dorsal part",L5 ET,0.0346613606042,0.000800796957045,531
+Primary motor area,RSP/ACA UL,0.0346571087837,0.0118101062842,10
+"Primary somatosensory area, nose",L5 IT,0.034623331788,0.00104757479344,377
+Supplemental somatosensory area,ENT L6b,0.0345789591471,0.00631698387747,3
+"Primary somatosensory area, lower limb",L2/3 IT,0.0345393969602,0.000605936269175,1643
+Ectorhinal area,PIR UL,0.0345237851143,0.00894146421174,9
+Posterolateral visual area,PPP,0.0345206280467,0.00078668728573,241
+Posterolateral visual area,ENT ML,0.0345144368507,0.00325337814955,37
+"Agranular insular area, posterior part",COA,0.0345053225756,0.00401350661572,16
+Temporal association areas,L4/5 IT,0.0344666167521,0.000829862222217,910
+"Primary somatosensory area, trunk",Unclear,0.0344201564789,0.00729378708436,5
+Anteromedial visual area,BLA/BMA/PA,0.0343055725098,0.000136852264404,2
+posteromedial visual area,L2/3 IT,0.0342759591435,0.00106733242861,764
+Cortical subplate,L6b,0.0342196716982,0.00499671383929,17
+"Agranular insular area, ventral part",Low quality,0.0341899837217,0.00519351111723,31
+Primary auditory area,L6b,0.0341742316197,0.00187386959404,174
+Temporal association areas,Unclear,0.034171640873,0.0176063042701,4
+Posterolateral visual area,NP PPP/RSP,0.0341439247131,0.0158848762512,2
+"Retrosplenial area, lateral agranular part",Car3,0.0340990066528,0.00649144050849,10
+Secondary motor area,ENT DL,0.0340418368578,0.00355153046247,24
+Laterointermediate area,L4/5 IT,0.0340412908734,0.00151373994956,406
+"Primary somatosensory area, mouth",L6 CT,0.033971759689,0.000600762361029,2803
+"Agranular insular area, ventral part",TR,0.0339676274194,0.0063669013041,9
+Posterolateral visual area,L5 IT,0.0339597018797,0.00224961321819,67
+"Anterior cingulate area, ventral part",L6 CT,0.0339413900105,0.00107483381247,317
+Supplemental somatosensory area,ENT ML,0.033931303592,0.00842342162505,21
+Primary auditory area,ENT ML,0.0338941459303,0.00397153760009,27
+Prelimbic area,BLAa,0.0338592529297,0.0,1
+"Retrosplenial area, dorsal part",L6b/CT,0.0338486194611,0.00461722731608,20
+Primary visual area,L4/5 IT,0.0338293377209,0.000345621767858,5682
+Posterolateral visual area,Car3,0.0338054136796,0.00395408092075,22
+Anterolateral visual area,L2/3 IT,0.0338022274303,0.00100139392042,910
+"Primary somatosensory area, barrel field",EPd,0.0337597131729,0.01001883208,5
+"Agranular insular area, ventral part",L5 IT,0.0337046821912,0.00469464352112,30
+"Retrosplenial area, lateral agranular part",NA,0.0337045349781,0.00100278766477,1888
+Temporal association areas,L6b/CT,0.0336752918616,0.0014524713398,306
+"Retrosplenial area, dorsal part",PPP,0.0336713933945,0.00286703541686,50
+"Agranular insular area, posterior part",ENT UL,0.0336670875549,0.0015664100647,2
+"Anterior cingulate area, dorsal part",RSP/ACA ML,0.0336595338744,0.000839414057729,370
+Temporal association areas,ENT ML,0.0336383951121,0.00414333375839,29
+Anterolateral visual area,L4/5 IT,0.0336286403571,0.00115135552911,741
+Supplemental somatosensory area,L6b/CT,0.0336131206581,0.00283427926007,105
+"Retrosplenial area, lateral agranular part",PIR UL,0.033572695472,0.00576198372183,11
+Ectorhinal area,L2/3 IT,0.0335585437233,0.000744671024061,695
+Postrhinal area,ENT ML,0.0335268156473,0.00117481185523,172
+Gustatory areas,L6 CT,0.0335166233056,0.00143587286949,264
+"Primary somatosensory area, unassigned",Low quality,0.0335153688987,0.0117270974602,18
+"Agranular insular area, posterior part",L4/5 IT,0.0335038988277,0.00124894903172,495
+posteromedial visual area,PIR UL,0.03350348132,0.00713075056921,7
+Temporal association areas,L6b,0.0334528918091,0.00189188611514,217
+"Primary somatosensory area, lower limb",Low quality,0.0334370533625,0.0243214680384,3
+Temporal association areas,TR,0.0334274768829,0.00627724490336,7
+Perirhinal area,PIR UL,0.0334096082619,0.00655223605178,14
+"Anterior cingulate area, ventral part",Unclear,0.0334010124207,0.0173964500427,2
+Temporal association areas,BLAa,0.0333418607712,0.0143782091156,10
+Ventral auditory area,L6 CT,0.0333290056715,0.00117098536311,316
+Lateral visual area,NP PPP/RSP,0.0332870483398,0.00316190719604,2
+Lateral visual area,PIR UL,0.0332786820152,0.00569576465161,11
+"Anterior cingulate area, ventral part",RSP/ACA UL,0.033237992555,0.000707232414646,359
+Dorsal auditory area,DGpo,0.0332329273224,0.00937104225159,2
+Postrhinal area,TR,0.0332248955965,0.0194754396483,4
+Posterior auditory area,ENT ML,0.0331885814667,0.0156171195701,3
+Ventral auditory area,L6b/CT,0.033141090069,0.00125275172292,192
+"Anterior cingulate area, ventral part",AON,0.033104300499,0.00328037887569,4
+Temporal association areas,RSP/ACA UL,0.0330679416656,0.000853300094604,2
+"Primary somatosensory area, barrel field",L6 CT,0.0330477001061,0.000452465562889,3368
+"Primary somatosensory area, nose",L6 IT,0.0330417902435,0.000815656040157,901
+Posterolateral visual area,ENT DL,0.0330111169323,0.00171321047691,97
+Lateral visual area,L2/3 IT,0.0329646789076,0.000677983252321,1966
+Ectorhinal area,Car3,0.0329139845959,0.00301388348052,69
+"Primary somatosensory area, unassigned",NP PPP/RSP,0.032874494791,0.0288082063198,2
+"Retrosplenial area, lateral agranular part",L2/3 IT,0.0328731999752,0.000742463447666,987
+Supplemental somatosensory area,L2/3 IT,0.0328639566859,0.000340045420732,5343
+Gustatory areas,RSP/ACA ML,0.0328483581543,0.0,1
+"Primary somatosensory area, mouth",PG,0.0328454272105,0.00908967748216,26
+Anteromedial visual area,PG,0.0327432950338,0.00974265361823,3
+Ectorhinal area,L4/5 IT,0.0326580545812,0.00225987252791,106
+"Agranular insular area, dorsal part",BLAa,0.0326276620229,0.0121568088003,3
+"Retrosplenial area, dorsal part",NP PPP/RSP,0.0325473491962,0.00120596779659,260
+Ventral auditory area,L4/5 IT,0.0324532734157,0.000497565518074,1391
+Perirhinal area,TR,0.0324260393778,0.00348829780481,6
+"Primary somatosensory area, lower limb",L6 IT,0.0323597694658,0.000896782880673,785
+"Primary somatosensory area, unassigned",L6 CT,0.0323466314492,0.00112028440769,781
+Anteromedial visual area,L6 IT,0.0323419161141,0.0021637669125,224
+Laterointermediate area,L2/3 IT,0.0323261740892,0.00120690485943,471
+Temporal association areas,EPd,0.0323122391161,0.00339558010421,53
+Posterior auditory area,L6b/CT,0.032283782959,0.00473123652185,13
+Primary visual area,L2/3 IT,0.0322818740429,0.000332042701614,5628
+Dorsal auditory area,L2/3 IT,0.0322729604048,0.000853796092483,1151
+Cortical subplate,Unclear,0.0322551727295,0.0,1
+"Anterior cingulate area, ventral part",ENT ML,0.0322408676147,0.0060704035153,10
+Ectorhinal area,RSP/ACA UL,0.0321706136068,0.00148904831668,3
+Ectorhinal area,RSP/ACA ML,0.0321625471115,0.0201245546341,2
+"Retrosplenial area, ventral part",NP PPP/RSP,0.0321542353857,0.000746511887105,525
+Ventral auditory area,ENT L6b,0.0321447948615,0.00296474675247,24
+"Retrosplenial area, lateral agranular part",L5 IT,0.0321280836717,0.000700432771684,698
+"Retrosplenial area, dorsal part",L6b,0.0321019114289,0.00198917653518,146
+Infralimbic area,L6 CT,0.0319356918335,0.0,1
+"Agranular insular area, ventral part",PIR UL,0.0319230159124,0.00439104154673,6
+Prelimbic area,L6b/CT,0.031863451004,0.00177454948425,2
+"Anterior cingulate area, ventral part",PIR UL,0.0318417549133,0.00200539470007,8
+"Anterior cingulate area, ventral part",L5 ET,0.031829532273,0.000605208069415,501
+"Anterior cingulate area, ventral part",RSP/ACA ML,0.0318291937001,0.00058592713718,512
+Ventral auditory area,Car3,0.031761272134,0.000832681516062,621
+Supplemental somatosensory area,EPd,0.0317234322429,0.00356026043569,24
+Anterior area,BLAa,0.0317220687866,0.0,1
+Prelimbic area,L6 IT,0.031699861799,0.00405889594346,7
+Posterolateral visual area,L4/5 IT,0.0316612843386,0.00107735765971,291
+"Retrosplenial area, ventral part",RSP/ACA UL,0.0316505396939,0.000250602945432,3557
+posteromedial visual area,L4/5 IT,0.0316322158281,0.00131150010872,357
+Postrhinal area,L4/5 IT,0.0316140331851,0.000736245647171,669
+"Retrosplenial area, ventral part",L5 IT,0.0315973162651,0.00343066564219,20
+Visceral area,AON,0.031533241272,0.00245664486225,3
+"Retrosplenial area, dorsal part",RSP/ACA ML,0.0315120855477,0.000512633018613,1701
+"Primary somatosensory area, barrel field",PIR UL,0.0314694462078,0.0056565177498,28
+"Retrosplenial area, dorsal part",TR,0.0314399401347,0.00489820071959,3
+"Anterior cingulate area, ventral part",L2/3 IT,0.0314158690558,0.000493990430901,553
+Primary visual area,Car3,0.0314156252405,0.00298640960713,115
+Postrhinal area,Car3,0.0313936552759,0.00309182782588,59
+Posterolateral visual area,NP,0.0313876522215,0.00286368506416,38
+"Agranular insular area, dorsal part",ENT UL,0.0313491821289,0.0,1
+Temporal association areas,LA,0.0313382148743,0.00699883730507,12
+Lateral visual area,L6 CT,0.0312793953302,0.000937223575667,665
+"Primary somatosensory area, upper limb",L2/3 IT,0.0312580570099,0.000525766572412,2856
+Posterolateral visual area,COA,0.031177520752,0.00294971466064,2
+"Anterior cingulate area, dorsal part",L4/5 IT,0.0311637449729,0.000646762715463,411
+"Agranular insular area, ventral part",EPd,0.0311616683394,0.0011947624914,123
+Postrhinal area,ENT UL,0.0311173711504,0.00241842181243,28
+Gustatory areas,EPd,0.031096308048,0.00339156560213,65
+Posterolateral visual area,RSP/ACA ML,0.0310197671254,0.00573884543115,9
+"Retrosplenial area, dorsal part",Low quality,0.0310126048114,0.000966552285746,448
+"Orbital area, lateral part",L6b/CT,0.0309453010559,0.000831127166748,2
+Anterolateral visual area,Car3,0.0309098254816,0.00317109071059,102
+Ventral auditory area,L6b,0.0308539615551,0.00154232960923,142
+Ectorhinal area,L6b,0.0308019421893,0.00120225609519,292
+"Primary somatosensory area, barrel field",L5 IT,0.030795568889,0.000820880357365,942
+"Anterior cingulate area, ventral part",EPd,0.0307809855487,0.00225779440246,37
+posteromedial visual area,PG,0.0307719707489,0.015093954765,4
+"Anterior cingulate area, ventral part",HIP SUB,0.0307692885399,0.00236321646805,24
+Temporal association areas,AON,0.0307538509369,0.00509190559387,2
+"Retrosplenial area, dorsal part",L2/3 IT,0.0307405182656,0.00134376385972,235
+Visceral area,LA,0.0306756893794,0.00456399299466,6
+Lateral visual area,L4/5 IT,0.0306650562083,0.000787622000067,1085
+"Anterior cingulate area, dorsal part",PIR UL,0.0306590520419,0.00272462577784,13
+"Retrosplenial area, lateral agranular part",ENT DL,0.0305928803505,0.00190309932848,94
+Postrhinal area,L2/3 IT,0.030577400826,0.000572745094856,985
+"Anterior cingulate area, dorsal part",BLAa,0.0304956436157,0.00363913801053,3
+"Anterior cingulate area, ventral part",L6b/CT,0.0304451550648,0.00137774087339,157
+Visceral area,L4/5 IT,0.0303762027868,0.000602600911989,1291
+"Agranular insular area, ventral part",L6b/CT,0.0303249972207,0.00152454369462,70
+Supplemental somatosensory area,L5 IT,0.030284687361,0.00111522586413,549
+"Agranular insular area, dorsal part",NP PPP/RSP,0.0302619934082,0.00240302985158,3
+posteromedial visual area,Low quality,0.030258761985,0.0092308459381,28
+Primary motor area,HIP CA3,0.0301386912664,0.00799067683156,6
+"Retrosplenial area, ventral part",Low quality,0.0301372301247,0.000665303756687,576
+Cortical subplate,ENT UL,0.03009557724,0.0,1
+"Primary somatosensory area, barrel field",L2/3 IT,0.0300901552353,0.000313439029581,6786
+"Agranular insular area, dorsal part",BLA/BMA/PA,0.0300803184509,0.0,1
+Primary auditory area,L5 ET,0.0300242875864,0.00120057289036,334
+"Agranular insular area, dorsal part",PIR UL,0.0299994945526,0.00816684063771,5
+"Primary somatosensory area, barrel field",AON,0.0299696624279,0.00621613698408,12
+Posterior auditory area,L2/3 IT,0.0299512521207,0.00144654898463,385
+Dorsal auditory area,L5 IT,0.0299248673699,0.00184922154176,220
+"Retrosplenial area, lateral agranular part",L4/5 IT,0.0298890517148,0.000845980849773,574
+"Retrosplenial area, ventral part",PPP,0.0298737182337,0.00210506301639,68
+"Anterior cingulate area, ventral part",TT,0.0297991286877,0.00326503071303,43
+"Anterior cingulate area, ventral part",NA,0.0297821925984,0.0007218248601,834
+"Agranular insular area, dorsal part",TR,0.0297363084905,0.00313238395208,17
+Primary motor area,L5 IT,0.0297331335502,0.00035417380341,2393
+Gustatory areas,L5 IT,0.0297228288651,0.0021779030197,50
+Posterolateral visual area,Low quality,0.0297051600435,0.00291011975023,66
+"Agranular insular area, posterior part",RSP/ACA ML,0.0296623706818,0.000458478927612,2
+Primary motor area,L6 IT,0.0296101959333,0.000381730920818,3092
+Primary visual area,L6 CT,0.0295265267554,0.000402934951578,3046
+Primary motor area,PIR UL,0.0294783512751,0.0033356766932,39
+"Anterior cingulate area, dorsal part",PG,0.0294752120972,0.00742737880102,5
+Cortical subplate,EPd,0.0293978588922,0.00276629583808,35
+"Agranular insular area, dorsal part",HIP CA3,0.0293211936951,0.00300598144531,2
+Ventral auditory area,L5 IT,0.0292928741631,0.0012765851085,179
+"Primary somatosensory area, upper limb",L6 IT,0.0292349683234,0.000850815459287,1320
+"Anterior cingulate area, ventral part",HIP CA3,0.029145385908,0.00286542421772,23
+Anteromedial visual area,NA,0.0291307190631,0.00163111795554,470
+"Primary somatosensory area, trunk",L5 ET,0.0291062639441,0.00086562387297,350
+"Retrosplenial area, dorsal part",HIP SUB,0.0291053533554,0.00420054337981,10
+"Agranular insular area, ventral part",Car3,0.0290917044309,0.000876627656008,199
+Posterolateral visual area,L2/3 IT,0.0290182253601,0.000759442989043,431
+Laterointermediate area,L6 CT,0.0289659076615,0.00222108773729,114
+"Retrosplenial area, lateral agranular part",RSP/ACA ML,0.0289653154857,0.00100021780441,680
+"Primary somatosensory area, barrel field",L6b/CT,0.0289420170916,0.00440844580569,18
+"Retrosplenial area, ventral part",Unclear,0.0289380771142,0.00445373168931,27
+"Agranular insular area, posterior part",L6b/CT,0.0289169986581,0.0017827020426,129
+"Anterior cingulate area, ventral part",ENT L6b,0.0288831233978,0.00458055264987,5
+Cortical subplate,Car3,0.0288771862697,0.000844876525363,283
+"Agranular insular area, posterior part",L5 ET,0.0287864964608,0.00152961457897,171
+"Anterior cingulate area, dorsal part",L6 CT,0.0287771695714,0.000498670200799,1075
+Anteromedial visual area,L4/5 IT,0.0287598917561,0.00113478489957,310
+"Primary somatosensory area, unassigned",L2/3 IT,0.0287382166898,0.000868346043374,1087
+"Anterior cingulate area, ventral part",L4/5 IT,0.0287048351242,0.000789327000399,251
+"Primary somatosensory area, lower limb",PIR UL,0.028607416153,0.010610587062,5
+Primary visual area,ENT ML,0.0286011869709,0.00241840614273,48
+"Retrosplenial area, lateral agranular part",L5 ET,0.0285980814929,0.00103758229204,843
+posteromedial visual area,NA,0.0285959577636,0.00148966298738,632
+Visceral area,L5 ET,0.0285774423914,0.00122470059167,236
+Anteromedial visual area,EPd,0.0285773277283,0.00455570220947,2
+Primary auditory area,L5 IT,0.0285454608442,0.00133781590485,258
+Ectorhinal area,L6b/CT,0.0284358787316,0.00240641715021,108
+Rostrolateral visual area,PIR UL,0.0284292399883,0.00933673774923,8
+Primary visual area,Low quality,0.0283965377655,0.000816394223985,798
+Anteromedial visual area,ENT ML,0.0283849239349,0.00518038972299,9
+"Orbital area, lateral part",L6 CT,0.0283789873123,0.00330201002233,30
+Cortical subplate,L6b/CT,0.0283577680588,0.00312109944972,10
+"Anterior cingulate area, ventral part",L6 IT,0.0283517865355,0.000869816178349,257
+"Retrosplenial area, dorsal part",HIP CA3,0.0283255577087,0.0,1
+"Primary somatosensory area, upper limb",ENT ML,0.0283164892878,0.0104916822401,7
+"Primary somatosensory area, lower limb",AON,0.0283072471619,0.00514279916945,5
+"Agranular insular area, dorsal part",EPd,0.0281852549547,0.00134538730489,154
+Secondary motor area,BLAa,0.0281833012899,0.00388366449563,3
+"Retrosplenial area, lateral agranular part",L6b,0.0280941728699,0.0018003668397,152
+"Agranular insular area, dorsal part",L6b,0.0280863831683,0.0014222817409,82
+"Retrosplenial area, dorsal part",ENT DL,0.0280780176963,0.00232943285575,31
+"Primary somatosensory area, upper limb",RSP/ACA UL,0.0280690193176,0.0,1
+"Anterior cingulate area, dorsal part",L6 IT,0.0280368254114,0.000641473727013,709
+Primary motor area,ENT L6b,0.0279474258423,0.0,1
+Anterior area,PIR UL,0.0279406785965,0.00316204385702,10
+Prelimbic area,L6 CT,0.0279189109802,0.00284392914796,10
+Lateral visual area,Car3,0.0278247356415,0.00221730406752,120
+Dorsal auditory area,L5 ET,0.0278042641424,0.0018013114513,210
+"Anterior cingulate area, ventral part",COA,0.0278033614159,0.00289278763496,4
+Primary motor area,L6 CT,0.0278023092111,0.00035045494357,3848
+Primary motor area,RSP/ACA ML,0.0277796153511,0.00756270272203,14
+Perirhinal area,Low quality,0.0276696819525,0.00374348108731,26
+Infralimbic area,TR,0.0276417732239,0.0,1
+Posterolateral visual area,NA,0.0275762371052,0.00080215821776,514
+Dorsal auditory area,L6 CT,0.0275726359144,0.000933141132707,559
+posteromedial visual area,EPd,0.0275681018829,0.00801491737366,2
+Ventral auditory area,L5 ET,0.027540838381,0.000821402519708,318
+Dorsal auditory area,ENT ML,0.0274397373199,0.00280657363855,5
+"Primary somatosensory area, nose",ENT ML,0.0274033136666,0.00742797791064,8
+"Retrosplenial area, ventral part",L2/3 IT,0.0273681114881,0.00300397144037,39
+Postrhinal area,RSP/ACA ML,0.0273270606995,0.0,1
+Anterolateral visual area,PIR UL,0.0273153781891,0.000503778457642,2
+Postrhinal area,Low quality,0.027308575809,0.00791831712978,16
+Cortical subplate,L5 ET,0.0273060180523,0.00270197331027,27
+"Retrosplenial area, lateral agranular part",NP,0.0272861946799,0.00120116514097,377
+Posterior auditory area,L6 CT,0.0272815166151,0.00222282683995,102
+"Retrosplenial area, ventral part",TT,0.0272779464722,0.0,1
+"Primary somatosensory area, unassigned",L5 IT,0.0272751059537,0.00143494163295,242
+"Anterior cingulate area, dorsal part",L6b/CT,0.0272644866597,0.00139285023455,77
+"Primary somatosensory area, lower limb",RSP/ACA UL,0.0272642374039,0.00529359759602,4
+"Primary somatosensory area, mouth",L6 IT,0.0272604694852,0.000583664124571,2122
+Supplemental somatosensory area,PIR UL,0.0272051876989,0.0047405750758,29
+Temporal association areas,HIP SUB,0.0271916985512,0.00811565491356,4
+"Anterior cingulate area, dorsal part",Low quality,0.0271486504511,0.00160062597242,88
+"Agranular insular area, dorsal part",L6 CT,0.0270144617016,0.000793666105148,330
+Cortical subplate,NA,0.0270038509369,0.00181131163359,100
+Posterior auditory area,PIR UL,0.0269989967346,0.0,1
+Primary auditory area,L6 CT,0.0269462268594,0.000761901601114,671
+Dorsal auditory area,Car3,0.0269337716544,0.00143414576851,232
+Visceral area,L6b/CT,0.0268255784717,0.00150312737228,267
+"Retrosplenial area, dorsal part",L5 IT,0.0267959626821,0.000942616525517,312
+Posterolateral visual area,L5 ET,0.0267785450833,0.00113974941626,177
+"Retrosplenial area, ventral part",PIR UL,0.02675814288,0.00468508608841,7
+Prelimbic area,NA,0.0266799926758,0.00381645138266,6
+"Retrosplenial area, dorsal part",L4/5 IT,0.0266430034912,0.0021629939873,139
+Primary auditory area,TR,0.0265738964081,0.00792145729065,2
+"Anterior cingulate area, dorsal part",NP PPP/RSP,0.0265725169863,0.00338800425905,14
+Dorsal auditory area,PIR UL,0.026546769672,0.00197127851206,9
+Rostrolateral visual area,L5 ET,0.0264928811845,0.00175946213524,212
+Ectorhinal area,HIP SUB,0.0264639854431,0.000562191009521,2
+"Retrosplenial area, dorsal part",Car3,0.0264181345701,0.00288729906004,16
+"Retrosplenial area, lateral agranular part",ENT UL,0.0263733863831,0.0,1
+Secondary motor area,L6b,0.0263663400578,0.000960308845814,395
+"Anterior cingulate area, ventral part",NP PPP/RSP,0.0263594521417,0.00310292464256,9
+"Retrosplenial area, dorsal part",NP,0.0263039285137,0.000699645570083,775
+Visceral area,PIR UL,0.0262311011553,0.00637573661994,10
+Perirhinal area,L4/5 IT,0.0261561762203,0.00298416228178,11
+Infralimbic area,L5 ET,0.0261535644531,0.00267357620855,10
+"Primary somatosensory area, trunk",NA,0.0261141425953,0.000738342797485,1034
+Rostrolateral visual area,L6 CT,0.0261060856063,0.000999060022183,509
+"Agranular insular area, posterior part",BLA/BMA/PA,0.0261015295982,0.00494533820466,23
+Anterolateral visual area,L6 CT,0.0260142180711,0.00103466866454,469
+"Anterior cingulate area, ventral part",Low quality,0.0259854968856,0.00169114086925,34
+"Primary somatosensory area, barrel field",ENT ML,0.0259817093611,0.00492654729831,16
+"Retrosplenial area, dorsal part",ENT ML,0.0259578108788,0.002615090201,20
+"Retrosplenial area, ventral part",L6 IT,0.025906251027,0.00121987504442,143
+"Orbital area, ventrolateral part",Low quality,0.0258460044861,0.0,1
+"Primary somatosensory area, trunk",L5 IT,0.0258178230421,0.000794537820334,405
+Primary motor area,COA,0.0257982730865,0.0093377249325,5
+Ventral auditory area,COA,0.0257810354233,0.0165573358536,2
+"Agranular insular area, dorsal part",ENT ML,0.0257054805756,0.00414387794733,10
+Postrhinal area,L5 ET,0.0257006928122,0.000893857757525,221
+"Retrosplenial area, dorsal part",NA,0.0256755527478,0.000390848670045,2930
+"Primary somatosensory area, mouth",RSP/ACA UL,0.025656580925,0.00988847578822,4
+"Retrosplenial area, dorsal part",L6 CT,0.0256252031896,0.000395052892384,1907
+"Agranular insular area, ventral part",ENT ML,0.0256232278688,0.00325022535549,14
+"Retrosplenial area, ventral part",ENT DL,0.0255351066589,0.00367711808708,4
+"Retrosplenial area, ventral part",NA,0.0255311632874,0.000283593765495,3240
+"Primary somatosensory area, unassigned",PIR UL,0.0254902243614,0.0103659138673,7
+Perirhinal area,BLA/BMA/PA,0.0254805088043,0.00541204485569,3
+"Retrosplenial area, lateral agranular part",L6 IT,0.0254588533792,0.000795016176732,727
+Secondary motor area,L6 IT,0.0254523846699,0.000439556729096,1381
+Gustatory areas,Car3,0.025445871327,0.000919864552638,274
+Ventral auditory area,LA,0.0253769556681,0.00254726714196,6
+"Primary somatosensory area, mouth",AON,0.025364001592,0.00554908756083,15
+"Retrosplenial area, dorsal part",BLAa,0.0253293514252,0.0134134291889,3
+"Retrosplenial area, dorsal part",Unclear,0.025325191021,0.00615794619969,10
+Perirhinal area,PPP,0.0253032616207,0.00574925531732,7
+"Anterior cingulate area, dorsal part",ENT ML,0.0253021187252,0.00446817000487,9
+Primary visual area,NA,0.0252798165692,0.000429425400114,4256
+"Primary somatosensory area, mouth",L2/3 IT,0.0252391807621,0.000339728258752,4901
+"Retrosplenial area, dorsal part",ENT UL,0.0252265930176,0.0,1
+Primary visual area,NP PPP/RSP,0.0252250909805,0.00538835351897,15
+"Anterior cingulate area, ventral part",NP,0.0251574347302,0.000793974447293,261
+"Agranular insular area, dorsal part",L5 ET,0.0251153597756,0.000711487240612,315
+"Agranular insular area, posterior part",TT,0.0251002311707,0.00623526801657,4
+"Primary somatosensory area, lower limb",BLAa,0.0250625610352,0.0,1
+Primary auditory area,LA,0.0250287055969,0.0,1
+Visceral area,Car3,0.0250143561996,0.00102167289052,354
+Dorsal auditory area,L6b,0.0249608906935,0.0038218174016,53
+Gustatory areas,PIR UL,0.0249113559723,0.00516752851313,5
+Anterolateral visual area,L5 ET,0.0248902224753,0.0020328967762,209
+"Anterior cingulate area, dorsal part",AON,0.0248241424561,0.0,1
+Lateral visual area,EPd,0.0248216152191,0.00308079299466,10
+"Agranular insular area, dorsal part",Car3,0.024797349702,0.000442316167913,831
+"Primary somatosensory area, unassigned",L6 IT,0.0246615523072,0.0012710205233,433
+Primary visual area,L5 ET,0.0246480145225,0.000559315169414,1289
+"Agranular insular area, posterior part",Car3,0.0246260242355,0.00139479179979,133
+Postrhinal area,RSP/ACA UL,0.0245451132456,0.00240472845419,15
+Primary motor area,Low quality,0.024518220829,0.0013773064853,227
+"Anterior cingulate area, dorsal part",HIP CA1,0.0244641304016,0.00695562362671,2
+Primary motor area,L6b/CT,0.0244451019822,0.00247626114402,41
+Perirhinal area,EPd,0.0243952274323,0.000778913497925,2
+"Retrosplenial area, lateral agranular part",L6 CT,0.0243705486115,0.000555204906683,1217
+Primary visual area,RSP/ACA UL,0.0242403792708,0.00249281487482,38
+Anterior area,NA,0.0242391006877,0.00082386167742,867
+Primary motor area,Car3,0.0242293582579,0.000911767466642,209
+Lateral visual area,L5 ET,0.0241826938648,0.00157223823062,255
+"Primary somatosensory area, trunk",L6 CT,0.0240816122814,0.000657430410039,676
+"Agranular insular area, dorsal part",Unclear,0.0240550041199,0.00320863723755,2
+Anteromedial visual area,NP PPP/RSP,0.0240441560745,0.00925481319427,2
+"Retrosplenial area, ventral part",L4/5 IT,0.0240366107378,0.00169536748914,39
+Anterior area,L5 ET,0.0240347346916,0.00142750579619,271
+"Retrosplenial area, ventral part",HIP CA1,0.0239572525024,0.00372791290283,2
+"Agranular insular area, dorsal part",L6b/CT,0.0239251164874,0.000710738515637,314
+Secondary motor area,Low quality,0.023911934538,0.00147668907209,97
+"Retrosplenial area, ventral part",NP,0.0237769669045,0.000376930285511,814
+Temporal association areas,L5 ET,0.0237714165044,0.000769009534586,412
+Postrhinal area,HIP SUB,0.0237712264061,0.00342106805635,4
+"Anterior cingulate area, ventral part",LA,0.0237647891045,0.00251063036868,4
+Ectorhinal area,BLAa,0.0236921310425,0.00162390008702,6
+"Anterior cingulate area, dorsal part",NP,0.0236683573512,0.00110307334612,181
+posteromedial visual area,BLAa,0.0236530303955,0.0,1
+Anterolateral visual area,RSP/ACA UL,0.0236216150224,0.0062182651761,8
+Anterior area,L6 CT,0.0235890717526,0.000770436395266,615
+Ectorhinal area,EPd,0.023550779752,0.0023206637283,53
+Posterior auditory area,Car3,0.0235480649604,0.0033585510473,36
+"Retrosplenial area, dorsal part",TT,0.0235075950623,0.0,1
+Primary visual area,PG,0.0234498160355,0.00343725893144,33
+posteromedial visual area,NP PPP/RSP,0.0234137535095,0.00378862190322,5
+"Primary somatosensory area, trunk",RSP/ACA UL,0.0233763217926,0.00371440613175,5
+"Agranular insular area, posterior part",TR,0.0233687957128,0.00214073739644,30
+"Primary somatosensory area, trunk",PG,0.0233503069196,0.00919287244292,7
+Anteromedial visual area,L5 ET,0.0232371398381,0.00131471123857,245
+"Primary somatosensory area, mouth",PIR UL,0.0231989145279,0.00774500633334,20
+Posterolateral visual area,RSP/ACA UL,0.0231313875743,0.00182619246445,14
+Anterior area,Low quality,0.0230703524181,0.00384728122985,14
+posteromedial visual area,L6 CT,0.0230560264633,0.000834872367784,571
+Ectorhinal area,DGpo,0.0230429172516,1.78813934326e-05,2
+Dorsal auditory area,PG,0.0229210853577,0.00251831609485,3
+"Primary somatosensory area, lower limb",NA,0.0229106326369,0.000599472093655,1427
+Anteromedial visual area,PIR UL,0.0228998184204,0.0056593774128,5
+"Agranular insular area, posterior part",ENT L6b,0.0228751599789,0.0176407396793,2
+"Primary somatosensory area, nose",NA,0.0228027676472,0.000732825543128,2103
+"Retrosplenial area, dorsal part",PG,0.0227749029795,0.00187267550109,15
+posteromedial visual area,L5 ET,0.0227570994551,0.00145159196635,249
+Gustatory areas,Low quality,0.0227570535048,0.0017235143422,115
+Primary visual area,BLAa,0.0227400064468,0.0020118016391,4
+"Primary somatosensory area, barrel field",RSP/ACA ML,0.0226396719615,0.00380773771276,6
+Primary motor area,NA,0.0226139039697,0.000291713995187,4990
+"Agranular insular area, ventral part",NP PPP/RSP,0.0225591659546,0.0,1
+Ventral auditory area,DGpo,0.0225558280945,0.0,1
+Anteromedial visual area,TT,0.0224982500076,0.00513160228729,2
+Gustatory areas,NA,0.022476140922,0.000714308428161,1069
+Anteromedial visual area,NP,0.0224322136711,0.0021780704478,85
+Primary auditory area,Car3,0.0224170010734,0.000807678606637,359
+"Agranular insular area, posterior part",L6b,0.0224102116274,0.00126819270602,167
+Anterior area,L6b,0.0223972900414,0.00154177861702,81
+"Agranular insular area, ventral part",ENT L6b,0.0223509073257,0.00841224193573,2
+"Primary somatosensory area, lower limb",L5 IT,0.0222481714044,0.000747180214601,554
+Lateral visual area,Low quality,0.0222269049422,0.00358226456279,44
+Laterointermediate area,L5 ET,0.0222123490138,0.00140274237272,110
+Cortical subplate,NP PPP/RSP,0.0222053527832,0.0,1
+Lateral visual area,ENT UL,0.0222034454346,0.0,1
+"Primary somatosensory area, nose",L2/3 IT,0.0221974287051,0.000387560274267,2106
+Gustatory areas,COA,0.0220727920532,0.0,1
+"Anterior cingulate area, dorsal part",NA,0.0220650962243,0.000493253116729,1152
+"Retrosplenial area, lateral agranular part",TR,0.0220346927643,0.00374689900597,5
+"Primary somatosensory area, mouth",NP,0.0220329532936,0.00113059727724,236
+Postrhinal area,PIR UL,0.0220301501891,0.00459823500204,17
+Primary visual area,AON,0.0219919532537,0.0142262632372,4
+"Agranular insular area, ventral part",L5 ET,0.0218576885039,0.00197176942541,62
+Anterolateral visual area,Unclear,0.0218267440796,0.0,1
+Temporal association areas,TT,0.0218138694763,0.0,1
+"Agranular insular area, dorsal part",NA,0.0218024773457,0.000604778076666,811
+Ectorhinal area,TT,0.0217954715093,0.00666960556212,3
+Anterolateral visual area,PPP,0.0216683149338,0.0,1
+"Retrosplenial area, dorsal part",PIR UL,0.0216475454244,0.00711317692918,11
+Anteromedial visual area,L6 CT,0.021644902107,0.0010104444368,341
+"Primary somatosensory area, upper limb",L5 IT,0.0216348728939,0.000827234029279,616
+Cortical subplate,NP,0.0215721130371,0.0,1
+"Agranular insular area, ventral part",NA,0.0215340795251,0.00120589115341,197
+"Primary somatosensory area, mouth",ENT ML,0.0215005993843,0.00383873139682,10
+"Primary somatosensory area, mouth",Low quality,0.0214046570114,0.00194606848597,208
+"Retrosplenial area, lateral agranular part",HIP SUB,0.021380841732,0.00417464621376,4
+"Primary somatosensory area, upper limb",NP PPP/RSP,0.0213779449463,0.00863675393766,5
+Temporal association areas,COA,0.0213724404573,0.00378741139685,20
+"Primary somatosensory area, upper limb",PG,0.0213632471859,0.00429125073271,24
+Posterior auditory area,L5 ET,0.0213555465045,0.00155241166861,103
+"Agranular insular area, posterior part",LA,0.0213150531054,0.00421497265896,8
+Ectorhinal area,PPP,0.0212821960449,0.0,1
+"Agranular insular area, ventral part",L6 CT,0.0211517594077,0.00130142149085,44
+Ventral auditory area,TT,0.0211503505707,0.0,1
+posteromedial visual area,NP,0.0210851661715,0.00195460906325,102
+Gustatory areas,L6b,0.0210766208507,0.001080959989,231
+"Primary somatosensory area, nose",NP,0.0210108902719,0.00141973314487,90
+"Agranular insular area, posterior part",EPd,0.0209638564814,0.000919849369356,278
+Anterior area,Unclear,0.0209567904472,0.012788652004,5
+"Primary somatosensory area, barrel field",PG,0.0209553396702,0.00270379590522,25
+Secondary motor area,NA,0.0208994261398,0.000321179422183,2351
+"Retrosplenial area, ventral part",PG,0.0208188295364,0.00273918581803,4
+"Retrosplenial area, dorsal part",L6 IT,0.0207921208767,0.000546446382376,722
+Gustatory areas,L6b/CT,0.0207810856767,0.000668583068547,286
+Temporal association areas,BLA/BMA/PA,0.020746588707,0.00194036960602,2
+Postrhinal area,HIP CA1,0.0206706523895,0.0102488994598,2
+Anterolateral visual area,Low quality,0.0205556343902,0.0033423548168,44
+"Agranular insular area, posterior part",DGpo,0.0205483436584,0.0,1
+Posterolateral visual area,LA,0.0205428600311,0.00171284670886,5
+Rostrolateral visual area,Low quality,0.0205282966296,0.00490233907404,21
+Posterolateral visual area,TR,0.0205274422963,0.00235892565532,9
+Primary visual area,NP,0.0204831551147,0.00079047933827,443
+Anterior area,HIP CA1,0.0204734802246,0.0,1
+Anterolateral visual area,TR,0.0204656124115,0.0,1
+Temporal association areas,RSP/ACA ML,0.020432472229,0.000552177429199,2
+"Primary somatosensory area, upper limb",NA,0.0202415649301,0.000559407426178,2477
+Gustatory areas,TR,0.0202209353447,0.00985006378013,6
+"Primary somatosensory area, mouth",NA,0.0201635482749,0.000441075641021,4629
+"Primary somatosensory area, nose",PIR UL,0.0201289400458,0.002416682324,20
+Lateral visual area,NA,0.0201136411538,0.000713203819547,1076
+Visceral area,EPd,0.0201121947656,0.00206501436561,104
+"Primary somatosensory area, barrel field",Low quality,0.0200793841524,0.00119662491379,379
+Primary auditory area,Low quality,0.0200374092568,0.00256203534062,44
+"Primary somatosensory area, nose",Low quality,0.0199825947589,0.00250217763501,47
+Perirhinal area,AON,0.0199575424194,0.0,1
+Ectorhinal area,TR,0.0199544062981,0.00195485236057,13
+Ventral auditory area,RSP/ACA ML,0.0199340879917,0.00973125179128,4
+"Agranular insular area, posterior part",RSP/ACA UL,0.0198154449463,0.0,1
+Primary auditory area,RSP/ACA UL,0.0197839140892,0.00428291671749,4
+"Primary somatosensory area, unassigned",NA,0.019778628897,0.000997689764878,955
+Rostrolateral visual area,L6b,0.0196711233684,0.00198573173677,70
+"Primary somatosensory area, mouth",Unclear,0.0196358938428,0.00390965306848,17
+Infralimbic area,NA,0.0196259793113,0.00261218765733,17
+"Retrosplenial area, lateral agranular part",EPd,0.0195795638221,0.00240909723808,14
+"Agranular insular area, dorsal part",LA,0.0195784568787,0.0,1
+Secondary motor area,TR,0.0195615291595,0.0,1
+"Primary somatosensory area, lower limb",PG,0.0195244252682,0.00964070633564,4
+"Agranular insular area, posterior part",NA,0.0195227659174,0.000702245452022,714
+Laterointermediate area,Car3,0.019455237048,0.00259285975014,42
+Primary motor area,NP,0.0194307170736,0.000612438555351,412
+Secondary motor area,L6 CT,0.0193360488727,0.000257107175268,2189
+Ectorhinal area,Low quality,0.0192852634937,0.00271031140018,32
+Anteromedial visual area,L6b,0.0192247957599,0.00185030609732,49
+Temporal association areas,Low quality,0.0191590379585,0.00305942964041,22
+Cortical subplate,HIP CA1,0.0191555023193,0.0,1
+Visceral area,L6b,0.0191016234354,0.00078757760163,361
+Posterolateral visual area,BLA/BMA/PA,0.0190886497498,0.0016423145571,5
+"Primary somatosensory area, barrel field",DGgc,0.0190716683865,0.00299858200177,4
+"Anterior cingulate area, dorsal part",PPP,0.0190509557724,0.000643610954285,2
+Ectorhinal area,L5 ET,0.0189557498014,0.00121798469185,79
+"Agranular insular area, posterior part",Low quality,0.0189137137042,0.00207695337167,113
+Secondary motor area,NP PPP/RSP,0.0188551505407,0.00234126805863,15
+"Primary somatosensory area, barrel field",NA,0.0188491259641,0.000325881537796,4909
+"Anterior cingulate area, ventral part",TR,0.0188477039337,0.00749034587355,5
+"Primary somatosensory area, upper limb",TR,0.0187210887671,0.0125926601675,3
+Primary motor area,L6b,0.0186983658542,0.000454797755033,823
+Anterior area,PPP,0.0186765909195,0.00640539113534,5
+"Primary somatosensory area, barrel field",L6b,0.0186749780671,0.000795504546116,466
+Secondary motor area,NP,0.0186620067401,0.000649606044234,332
+Lateral visual area,NP,0.0186593690062,0.00190969647932,79
+"Agranular insular area, posterior part",DGgc,0.0186347961426,0.0,1
+"Primary somatosensory area, barrel field",RSP/ACA UL,0.0186125172509,0.000624193778686,9
+Postrhinal area,NP,0.0185011487076,0.00155047754638,69
+Posterior auditory area,COA,0.0184211730957,0.0,1
+Anterior area,PG,0.0183607018911,0.0038992731805,13
+Gustatory areas,HIP CA3,0.0182614326477,0.00187586628969,3
+"Agranular insular area, dorsal part",ENT L6b,0.0181498229504,0.00341373794491,8
+Anterior area,HIP CA3,0.0181438128153,0.00063776481682,3
+Gustatory areas,NP,0.0181275799468,0.00130063065443,74
+"Primary somatosensory area, trunk",L6b,0.0180587000919,0.00158374747679,99
+"Agranular insular area, posterior part",NP,0.0180522582748,0.0012460743341,66
+Primary motor area,PG,0.0180319809914,0.00241238945095,25
+Primary auditory area,ENT L6b,0.0180270671844,0.0,1
+Primary motor area,EPd,0.0179996490479,0.00160455703735,2
+Secondary motor area,L6b/CT,0.0179583461661,0.00235447961042,19
+"Primary somatosensory area, lower limb",L6b,0.0179141297865,0.00110039755046,209
+Anterior area,NP,0.0179014284502,0.00149895447427,110
+Primary visual area,Unclear,0.0178965516388,0.0058334795571,16
+Dorsal auditory area,PPP,0.017840385437,0.0,1
+Postrhinal area,LA,0.0178327560425,0.00620269775391,2
+Perirhinal area,L6 CT,0.0178127288818,0.0,1
+Ventral auditory area,Low quality,0.0177004635334,0.00485781809864,10
+Supplemental somatosensory area,Low quality,0.0176657990316,0.00110200313604,397
+"Primary somatosensory area, upper limb",L6b,0.0176608610144,0.000997104026485,336
+Anterolateral visual area,RSP/ACA ML,0.0176506638527,0.00607818365097,2
+Supplemental somatosensory area,NA,0.0176495871157,0.000346523208986,5059
+Visceral area,Low quality,0.0176298127455,0.00214997863692,51
+Supplemental somatosensory area,L6b,0.0175834544564,0.000583832996214,956
+Posterior auditory area,Low quality,0.0175824165344,0.00701284408569,2
+"Primary somatosensory area, barrel field",NP,0.0175460362125,0.000844661366388,328
+"Primary somatosensory area, mouth",L6b/CT,0.0173300156991,0.00694538497271,12
+"Anterior cingulate area, ventral part",DGpo,0.0173141956329,0.0,1
+"Agranular insular area, posterior part",HIP CA3,0.017130613327,0.0,1
+Primary motor area,NP PPP/RSP,0.017075041309,0.00251134703756,16
+Rostrolateral visual area,NA,0.0170413892764,0.000799709108361,701
+Anterolateral visual area,NP PPP/RSP,0.0169689144407,0.00486911891243,7
+"Primary somatosensory area, barrel field",NP PPP/RSP,0.0168199709484,0.00422527829772,7
+"Agranular insular area, dorsal part",NP,0.0167513175653,0.00081826539907,130
+Secondary motor area,PG,0.01674439013,0.00162000359154,16
+Primary auditory area,NA,0.0167152552844,0.000434343049312,1416
+Supplemental somatosensory area,DGpo,0.0166759490967,0.0,1
+"Primary somatosensory area, upper limb",PIR UL,0.0166666954756,0.00518283769601,13
+"Primary somatosensory area, upper limb",Low quality,0.0166239149514,0.00208602502398,63
+Posterior auditory area,PG,0.0166050195694,0.00500857830048,2
+"Retrosplenial area, dorsal part",BLA/BMA/PA,0.0166020393372,0.0,1
+"Primary somatosensory area, lower limb",NP,0.0165567376896,0.000998813124846,190
+Infralimbic area,NP,0.0164927641551,0.00307254080477,3
+Postrhinal area,NA,0.0164731852323,0.000459699248863,865
+Anterolateral visual area,NA,0.0164311220907,0.000902367577516,743
+Laterointermediate area,NA,0.0163654646257,0.00121144388876,296
+Gustatory areas,LA,0.0163612961769,0.00571769475937,2
+"Primary somatosensory area, barrel field",Unclear,0.0163290858269,0.0062648629324,10
+Infralimbic area,ENT ML,0.016325712204,0.0,1
+Perirhinal area,COA,0.0162761211395,0.0,1
+"Retrosplenial area, ventral part",ENT UL,0.0161944826444,0.00251235038543,6
+Primary visual area,HIP CA1,0.0161280930042,0.00230859931479,4
+Perirhinal area,NA,0.0161189473037,0.000862741117559,132
+"Primary somatosensory area, mouth",EPd,0.0160012245178,0.0,1
+Primary auditory area,PIR UL,0.0159053653479,0.00478561263848,4
+Gustatory areas,ENT L6b,0.0158939361572,0.00297562135174,6
+"Orbital area, ventrolateral part",L5 ET,0.0158395767212,0.00245507576156,5
+Gustatory areas,RSP/ACA UL,0.0158209460122,0.00139360062659,7
+"Primary somatosensory area, nose",L6b,0.0158025468974,0.000780549245603,238
+Primary motor area,Unclear,0.0157799991694,0.00513858425445,11
+Anterior area,DGgc,0.015659292539,0.00316736465908,3
+Temporal association areas,NA,0.0154715009459,0.000411076775176,1304
+Posterolateral visual area,HIP CA1,0.0154616832733,0.0,1
+"Primary somatosensory area, unassigned",PG,0.0154549169044,0.00718017125085,12
+Lateral visual area,AON,0.0154533982277,0.00218193834982,4
+"Primary somatosensory area, upper limb",NP,0.0154511279055,0.000942641385369,223
+Laterointermediate area,Low quality,0.015166759491,0.0040323537454,4
+Posterolateral visual area,DGpo,0.015077829361,0.0,1
+"Primary somatosensory area, barrel field",PPP,0.0150678157806,0.0,1
+"Primary somatosensory area, trunk",NP,0.015052824962,0.000955608082831,119
+Prelimbic area,NP,0.0150244235992,0.0,1
+Posterior auditory area,NA,0.0150103698952,0.00120752463891,281
+Supplemental somatosensory area,PPP,0.0149943828583,0.0,1
+"Orbital area, ventrolateral part",NA,0.014987177319,0.00182819190955,9
+Gustatory areas,ENT ML,0.0149707198143,0.00404220819473,2
+"Agranular insular area, dorsal part",DGpo,0.0149348080158,0.00153130876531,4
+Visceral area,TR,0.0148861408234,0.0,1
+"Agranular insular area, ventral part",COA,0.0148386160533,0.00166195716902,3
+"Primary somatosensory area, nose",RSP/ACA ML,0.0148357152939,0.00272762775421,2
+Dorsal auditory area,Unclear,0.0148213307063,0.00370691372048,6
+"Primary somatosensory area, unassigned",NP,0.0147993592116,0.00137690843196,65
+Ventral auditory area,NA,0.0147979137925,0.000377875697035,1056
+"Primary somatosensory area, mouth",NP PPP/RSP,0.014771938324,0.00395655632019,2
+Primary motor area,DGpo,0.0147244930267,0.0,1
+"Primary somatosensory area, nose",PPP,0.0146582126617,0.00105166435242,2
+Visceral area,NA,0.014645268842,0.000514753816527,1260
+Primary auditory area,BLA/BMA/PA,0.0146389007568,0.0,1
+Dorsal auditory area,COA,0.0145533084869,0.00305104255676,2
+Dorsal auditory area,NP PPP/RSP,0.0145220756531,0.0,1
+Lateral visual area,LA,0.0145120620728,0.0,1
+Postrhinal area,PG,0.0144742925962,0.00534973273868,3
+Postrhinal area,BLA/BMA/PA,0.0144567489624,0.0,1
+Anterolateral visual area,DGpo,0.0143494606018,0.0,1
+Ectorhinal area,AON,0.0143444538116,0.0,1
+Ventral auditory area,NP,0.0143039345236,0.00111422723843,118
+Dorsal auditory area,Low quality,0.0142758804209,0.00371336514414,17
+Postrhinal area,COA,0.0142493198315,0.00204391782626,12
+Primary visual area,BLA/BMA/PA,0.0142119884491,0.00227305054692,5
+Primary auditory area,NP,0.0142016889028,0.000781573541532,153
+Ectorhinal area,NA,0.014137539958,0.00055070899901,546
+"Primary somatosensory area, barrel field",COA,0.0140483878553,0.00747708035897,5
+Dorsal auditory area,NA,0.0140172743577,0.000559754835035,933
+"Retrosplenial area, lateral agranular part",COA,0.0140124559402,0.000873179158589,4
+Gustatory areas,AON,0.0140006542206,0.00184726715088,2
+"Primary somatosensory area, upper limb",RSP/ACA ML,0.0139467716217,0.00785744933213,3
+"Primary somatosensory area, lower limb",NP PPP/RSP,0.0139125585556,0.00220166548995,6
+"Agranular insular area, dorsal part",RSP/ACA ML,0.0138669162989,0.00153651280933,8
+Laterointermediate area,NP,0.0138289998559,0.00172975126051,34
+Supplemental somatosensory area,RSP/ACA UL,0.0137334167957,0.00338289409246,4
+Supplemental somatosensory area,AON,0.0137331485748,0.00376033782959,2
+"Retrosplenial area, lateral agranular part",PG,0.0136402050654,0.00308033635674,6
+"Agranular insular area, ventral part",NP,0.0135792305595,0.00162463496524,19
+"Primary somatosensory area, unassigned",AON,0.0135641098022,0.0,1
+Secondary motor area,ENT UL,0.0135447581609,0.00328381983729,3
+"Primary somatosensory area, lower limb",HIP CA1,0.0134991407394,0.00490987300873,2
+Perirhinal area,L5 ET,0.0134606599808,0.0035352442326,5
+Posterolateral visual area,EPd,0.0134408076604,0.00253327513775,3
+Primary motor area,HIP SUB,0.0134027004242,0.0,1
+Visceral area,PPP,0.013357847929,0.00146248936653,2
+Anterior area,AON,0.0132528543472,0.00104534626007,2
+Supplemental somatosensory area,DGgc,0.0132472515106,0.0,1
+Secondary motor area,COA,0.0130884647369,0.0,1
+Primary visual area,HIP CA3,0.0130492108209,0.00117561439295,7
+Rostrolateral visual area,Unclear,0.012804068625,0.00341676128769,4
+"Agranular insular area, ventral part",LA,0.0127744674683,0.0,1
+"Retrosplenial area, lateral agranular part",BLAa,0.012690782547,0.0,1
+"Primary somatosensory area, lower limb",Car3,0.0125977993011,0.0,1
+"Primary somatosensory area, upper limb",HIP CA1,0.012567281723,7.31945037842e-05,2
+"Primary somatosensory area, mouth",L6b,0.012375676928,0.000655825683101,463
+Supplemental somatosensory area,NP,0.0123649819741,0.000743203330232,221
+Cortical subplate,COA,0.0123352209727,0.00297317343681,3
+"Agranular insular area, ventral part",ENT UL,0.012282371521,0.0,1
+"Primary somatosensory area, nose",RSP/ACA UL,0.0122210383415,0.00589710474014,2
+"Primary somatosensory area, unassigned",L6b/CT,0.0121685465177,0.00234365730213,3
+"Primary somatosensory area, trunk",NP PPP/RSP,0.0121505856514,0.00179923594537,6
+"Primary somatosensory area, upper limb",L6b/CT,0.0120635905436,0.00261599150441,14
+Visceral area,NP,0.0119372072319,0.00116813509648,120
+"Primary somatosensory area, nose",ENT DL,0.0119273662567,0.0,1
+Rostrolateral visual area,PG,0.011915063858,0.0021633606208,10
+Primary auditory area,PG,0.0118956186555,0.00223877389746,11
+Lateral visual area,RSP/ACA ML,0.0118896961212,0.0,1
+Anterolateral visual area,NP,0.0118506488949,0.00160436117446,100
+"Primary somatosensory area, nose",Unclear,0.0118192285299,0.00225885051826,4
+"Retrosplenial area, lateral agranular part",HIP CA1,0.0118008852005,0.00148236751556,2
+"Primary somatosensory area, nose",NP PPP/RSP,0.0117540359497,0.00171014168916,3
+"Primary somatosensory area, lower limb",RSP/ACA ML,0.0116518586874,0.00757564604282,2
+"Primary somatosensory area, trunk",PPP,0.0113275766373,0.00196031995132,5
+Rostrolateral visual area,NP,0.0112879261987,0.00101384943404,73
+"Primary somatosensory area, upper limb",Car3,0.011247754097,0.0,1
+"Primary somatosensory area, mouth",BLA/BMA/PA,0.0111570358276,0.0,1
+Temporal association areas,NP,0.0110493395208,0.000777078757851,138
+Ectorhinal area,NP,0.0108620783557,0.00159382056838,23
+Temporal association areas,PG,0.0107668757439,0.00307787532492,5
+"Primary somatosensory area, unassigned",Unclear,0.0105727116267,0.00192889997593,3
+"Agranular insular area, ventral part",BLAa,0.0105452537537,0.0,1
+Rostrolateral visual area,TT,0.0104748010635,0.0,1
+"Primary somatosensory area, nose",L6b/CT,0.0104123771191,0.00192642102538,5
+Supplemental somatosensory area,Unclear,0.0103324372321,0.00277425750895,16
+Posterior auditory area,NP,0.0102458968759,0.00125491796129,32
+Rostrolateral visual area,NP PPP/RSP,0.0102014243603,0.00525668263435,2
+Ventral auditory area,AON,0.0101474523544,0.0,1
+Temporal association areas,PPP,0.010133934021,0.000935669582281,5
+Dorsal auditory area,RSP/ACA UL,0.010101556778,0.0,1
+Visceral area,RSP/ACA ML,0.00996673107147,0.0,1
+"Orbital area, ventrolateral part",NP,0.00993800163269,0.0,1
+Dorsal auditory area,NP,0.00959648560452,0.000819122012582,93
+"Primary somatosensory area, upper limb",DGpo,0.00959515571594,0.0,1
+Lateral visual area,COA,0.0095489025116,0.0,1
+Temporal association areas,HIP CA3,0.00948977470398,0.000229716300964,2
+Anterior area,NP PPP/RSP,0.00937306880951,0.00279486179352,2
+Ventral auditory area,PPP,0.00935399532318,0.0,1
+Anterolateral visual area,PG,0.00926077365875,0.00400669176605,5
+"Agranular insular area, posterior part",PPP,0.00918793678284,0.0,1
+"Orbital area, lateral part",L5 IT,0.00915098190308,0.0,1
+"Primary somatosensory area, unassigned",L6b,0.00914702206796,0.000787549291379,138
+"Retrosplenial area, ventral part",MOB UL,0.00901079177856,0.0,1
+"Retrosplenial area, lateral agranular part",AON,0.00895440578461,0.0,1
+"Primary somatosensory area, unassigned",PPP,0.00889849662781,0.0,1
+Primary motor area,LA,0.00863432884216,0.0,1
+Visceral area,ENT ML,0.00863218307495,0.0,1
+Primary visual area,TT,0.00839710235596,0.0,1
+Primary motor area,ENT UL,0.00827646255493,0.0,1
+Ventral auditory area,NP PPP/RSP,0.00825917720795,0.0,1
+Temporal association areas,BA,0.00824022293091,0.0,1
+"Agranular insular area, posterior part",HIP SUB,0.00824010372162,0.0,1
+Visceral area,COA,0.00810098648071,0.0,1
+Postrhinal area,Unclear,0.00789892673492,0.0,1
+Secondary motor area,EPd,0.00783216953278,0.0,1
+posteromedial visual area,Unclear,0.00766408443451,0.0,1
+"Orbital area, lateral part",PG,0.00761556625366,0.0,1
+"Primary somatosensory area, unassigned",EPd,0.00752711296082,0.0,1
+Primary motor area,HIP CA1,0.00737370550632,0.0016281067443,6
+Laterointermediate area,PIR UL,0.0069993019104,0.000667072634728,5
+"Agranular insular area, ventral part",HIP CA1,0.00699126720428,0.0,1
+Primary motor area,DGgc,0.00689963499705,0.00203270121465,3
+Visceral area,PG,0.00686830282211,0.0,1
+"Primary somatosensory area, unassigned",Car3,0.00679600834846,0.00365356649596,5
+"Primary somatosensory area, barrel field",TR,0.00669717788696,0.000960052013397,2
+"Primary somatosensory area, nose",ENT UL,0.0066351890564,0.000174522399902,2
+Ventral auditory area,HIP SUB,0.00648954510689,0.0,1
+Rostrolateral visual area,RSP/ACA UL,0.00645524263382,0.0,1
+"Primary somatosensory area, upper limb",Unclear,0.00633245334029,0.00123749565655,6
+"Primary somatosensory area, unassigned",BLA/BMA/PA,0.00630295276642,0.0,1
+"Agranular insular area, ventral part",Unclear,0.00626361370087,0.0,1
+Ventral auditory area,BLAa,0.00618171691895,0.0,1
+"Primary somatosensory area, upper limb",EPd,0.0059894323349,0.0,1
+Visceral area,BLA/BMA/PA,0.00592187047005,0.00150474839453,9
+Anterior area,L6b/CT,0.00590017437935,0.000802367925644,2
+Visceral area,HIP SUB,0.00581336021423,0.0,1
+"Primary somatosensory area, unassigned",ENT DL,0.00574254989624,0.0,1
+Visceral area,TT,0.00556722283363,0.0,1
+Ectorhinal area,PG,0.00540095567703,0.000338494777679,2
+Rostrolateral visual area,DGgc,0.00519227981567,0.0,1
+Ectorhinal area,Unclear,0.00487844645977,0.000331148505211,2
+Rostrolateral visual area,HIP CA3,0.00465565919876,0.0,1
+"Primary somatosensory area, nose",HIP CA1,0.00424045324326,0.0,1
+"Primary somatosensory area, barrel field",HIP CA1,0.00419080257416,0.00046306848526,2
+Supplemental somatosensory area,NP PPP/RSP,0.0041798154513,0.000684272804631,6
+Laterointermediate area,DGgc,0.00349348783493,0.0,1
+"Primary somatosensory area, upper limb",ENT UL,0.00339031219482,0.0,1
+"Retrosplenial area, dorsal part",DGpo,0.00327211618423,0.0,1
+"Primary somatosensory area, mouth",HIP CA1,0.00304359197617,0.0,1
+"Primary somatosensory area, barrel field",HIP SUB,0.0030380487442,0.0,1
+Supplemental somatosensory area,LA,0.00295153260231,0.0,1
+"Primary somatosensory area, unassigned",RSP/ACA ML,0.00289605061213,0.000320014797983,3
+"Primary somatosensory area, upper limb",ENT DL,0.00289492309093,0.000686092620673,3
+"Primary somatosensory area, mouth",ENT DL,0.00264234095812,0.000665001571178,2
+"Primary somatosensory area, barrel field",HIP CA3,0.0023128092289,0.0,1
+Anterior area,Car3,0.00168295204639,0.0,1
+"Primary somatosensory area, unassigned",COA,0.00160071253777,0.0,1
+Supplemental somatosensory area,HIP CA3,0.00139508396387,0.000105462968349,2
+Supplemental somatosensory area,HIP SUB,0.00138770540555,0.000307235107346,3
