@@ -20,7 +20,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from joblib import load as joblib_load
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils import reflect_points_to_left, compute_flatmap_pixel_area_map, interpolate_pixel_area_to_grid
@@ -51,44 +50,37 @@ D076_4L_PREDICTION_DIR = os.path.join(
 )
 
 
-def load_control_coords_and_models():
-    """Load reflected coordinates and saved SVC models for each control brain."""
+def load_all_brain_data():
+    """Load coordinates and predictions for all 8 brains. Returns list of dicts."""
     from datasets import load_from_disk
 
-    brains = {}
+    brains = []
+
+    # Control brains
     for fold, (animal_ds_name, display_name) in CONTROL_BRAINS.items():
         fold_dir = f"fold{fold}_animal_name_class_weights2_{GROUP_SIZE}"
         base = os.path.join(ROOT_DATA_PATH, "barseq", "annotation", fold_dir)
 
-        # Load SVC model
-        svc_path = os.path.join(base, "svc_boundaries", "svm_gamma_0.00001000.joblib")
-        model = joblib_load(svc_path)
+        pred_path = os.path.join(base, "test_brain_predictions_cells.npy")
+        pred_dict = np.load(pred_path, allow_pickle=True).item()
+        predictions = pred_dict["predictions"]
+        indices = np.array(pred_dict["indices"])
 
-        # Load coordinates from dataset
         dataset_path = os.path.join(
             ROOT_DATA_PATH, "barseq", "Chen2023",
             f"train_test_barseq_all_exhausted_fold{fold}.dataset",
         )
         dataset = load_from_disk(dataset_path)
-        test_ds = dataset["test"]
-        ccf = np.array(test_ds["CCF_streamlines"])
+        ccf = np.array(dataset["test"]["CCF_streamlines"])[indices]
         xy = reflect_points_to_left(ccf[:, :2])
 
-        brains[display_name] = {
-            "condition": "control",
-            "model": model,
-            "xy": xy,
-        }
-        print(f"  Loaded control {display_name} (fold {fold}): {len(xy)} cells")
+        brains.append({
+            "name": display_name, "condition": "control",
+            "xy": xy, "predictions": predictions,
+        })
+        print(f"  Loaded {display_name}: {len(predictions)} cells")
 
-    return brains
-
-
-def load_enucleated_coords_and_fit_models():
-    """Load enucleated predictions, filter per brain, fit per-brain SVCs."""
-    from datasets import load_from_disk
-    from cuml.svm import SVC
-
+    # Enucleated brains (D077, D078, D079)
     pred_dir = f"foldtest_enucleated_animal_name_class_weights2_{GROUP_SIZE}"
     pred_path = os.path.join(
         ROOT_DATA_PATH, "barseq", "annotation", pred_dir,
@@ -98,7 +90,6 @@ def load_enucleated_coords_and_fit_models():
         ROOT_DATA_PATH, "barseq", "Chen2023",
         "train_test_barseq_all_exhausted_test_enucleated.dataset",
     )
-
     pred_dict = np.load(pred_path, allow_pickle=True).item()
     dataset = load_from_disk(dataset_path)
     test_ds = dataset["test"]
@@ -108,61 +99,33 @@ def load_enucleated_coords_and_fit_models():
     animal_names = np.array(test_ds["animal_name"])[indices]
     ccf_streamlines = np.array(test_ds["CCF_streamlines"])[indices]
 
-    brains = {}
     for animal in ENUCLEATED_ANIMALS:
         display_name = ENUCLEATED_DISPLAY[animal]
         mask = animal_names == animal
         preds = predictions[mask]
-        xyz = ccf_streamlines[mask]
-        xy = reflect_points_to_left(xyz[:, :2])
+        xy = reflect_points_to_left(ccf_streamlines[mask, :2])
+        brains.append({
+            "name": display_name, "condition": "enucleated",
+            "xy": xy, "predictions": preds,
+        })
+        print(f"  Loaded {display_name}: {mask.sum()} cells")
 
-        print(f"  Fitting SVC for {display_name}: {mask.sum()} cells...")
-        xy_f32 = xy.astype(np.float32)
-        svc = SVC(kernel="rbf", gamma=SVC_GAMMA, C=SVC_C)
-        with SuppressOutput():
-            svc.fit(xy_f32, preds.astype(np.float32))
-
-        brains[display_name] = {
-            "condition": "enucleated",
-            "model": svc,
-            "xy": xy,
-        }
+    # D076_4L
+    d076_pred = np.load(os.path.join(D076_4L_PREDICTION_DIR, "predictions.npy"),
+                        allow_pickle=True).item()
+    d076_ds = load_from_disk(os.path.join(D076_4L_PREDICTION_DIR, "tokenized.dataset"))
+    d076_indices = np.array(d076_pred["indices"])
+    d076_ccf = np.array(d076_ds["CCF_streamlines"])
+    group_ccf = d076_ccf[d076_indices]
+    ccf_mean = np.nanmean(group_ccf, axis=1)
+    xy = reflect_points_to_left(ccf_mean[:, :2])
+    brains.append({
+        "name": "D076_4L", "condition": "enucleated",
+        "xy": xy, "predictions": d076_pred["predictions"],
+    })
+    print(f"  Loaded D076_4L: {len(d076_pred['predictions'])} groups")
 
     return brains
-
-
-def load_d076_4l():
-    """Load D076_4L predictions from the single-brain pipeline and fit SVC."""
-    from datasets import load_from_disk
-    from cuml.svm import SVC
-
-    pred_path = os.path.join(D076_4L_PREDICTION_DIR, "predictions.npy")
-    dataset_path = os.path.join(D076_4L_PREDICTION_DIR, "tokenized.dataset")
-
-    pred_dict = np.load(pred_path, allow_pickle=True).item()
-    dataset = load_from_disk(dataset_path)
-
-    predictions = pred_dict["predictions"]
-    indices = np.array(pred_dict["indices"])  # (n_groups, group_size)
-    all_ccf = np.array(dataset["CCF_streamlines"])
-
-    # Average coordinates across each group
-    group_ccf = all_ccf[indices]  # (n_groups, group_size, 3)
-    ccf_mean = np.nanmean(group_ccf, axis=1)  # (n_groups, 3)
-
-    xy = reflect_points_to_left(ccf_mean[:, :2])
-
-    print(f"  Fitting SVC for D076_4L: {len(predictions)} groups...")
-    xy_f32 = xy.astype(np.float32)
-    svc = SVC(kernel="rbf", gamma=SVC_GAMMA, C=SVC_C)
-    with SuppressOutput():
-        svc.fit(xy_f32, predictions.astype(np.float32))
-
-    return {"D076_4L": {
-        "condition": "enucleated",
-        "model": svc,
-        "xy": xy,
-    }}
 
 
 def compute_shared_grid(all_brains):
@@ -196,21 +159,39 @@ def load_label_names():
     return {int(k): v for k, v in cfg["label_names"].items()}
 
 
-def compute_all_areas(all_brains, X_grid, pixel_area_per_point, label_names):
-    """Predict on shared grid and compute physical area for every region per brain.
+def fit_predict_and_release(xy, predictions, X_grid):
+    """Fit a cuML SVC, predict on the grid, and release GPU memory."""
+    import gc
+    from cuml.svm import SVC
+    from svc_plotting import SuppressOutput
+
+    svc = SVC(kernel="rbf", gamma=SVC_GAMMA, C=SVC_C)
+    with SuppressOutput():
+        svc.fit(xy.astype(np.float32), predictions.astype(np.float32))
+        grid_preds = svc.predict(X_grid)
+    if hasattr(grid_preds, "get"):
+        grid_preds = grid_preds.get()
+    grid_preds = np.asarray(grid_preds).astype(int)
+
+    del svc
+    gc.collect()
+    try:
+        import cupy as cp
+        cp.get_default_memory_pool().free_all_blocks()
+    except ImportError:
+        pass
+
+    return grid_preds
+
+
+def compute_all_areas_from_grid_preds(all_grid_preds, pixel_area_per_point, label_names):
+    """Compute physical area for every region per brain from pre-computed grid predictions.
 
     Returns a DataFrame with columns: brain, condition, label, area_name, area_mm2, pixel_count.
     """
     results = []
-    for name, info in all_brains.items():
-        model = info["model"]
-        print(f"  Predicting on grid for {name}...")
-        with SuppressOutput():
-            preds = model.predict(X_grid)
-        if hasattr(preds, "get"):
-            preds = preds.get()
-        preds = np.asarray(preds).astype(int)
-
+    for name, info in all_grid_preds.items():
+        preds = info["grid_preds"]
         unique_labels = np.unique(preds)
         for label in unique_labels:
             mask = preds == label
@@ -356,19 +337,13 @@ def main():
         print(f"Loading existing results from {csv_path}...")
         df = pd.read_csv(csv_path)
     else:
-        print("Loading control brains...")
-        control_brains = load_control_coords_and_models()
-
-        print("Loading enucleated brains...")
-        enucleated_brains = load_enucleated_coords_and_fit_models()
-
-        print("Loading D076_4L...")
-        d076_4l = load_d076_4l()
-
-        all_brains = {**control_brains, **enucleated_brains, **d076_4l}
+        print("Loading all brain data...")
+        brain_data = load_all_brain_data()
 
         print("Computing shared grid...")
-        X_grid, xx0, xx1, bounds = compute_shared_grid(all_brains)
+        # Build a temporary dict for compute_shared_grid
+        tmp = {b["name"]: {"xy": b["xy"]} for b in brain_data}
+        X_grid, xx0, xx1, bounds = compute_shared_grid(tmp)
         x_min, x_max, y_min, y_max = bounds
         svc_dx = (x_max - x_min) / GRID_RESOLUTION
         svc_dy = (y_max - y_min) / GRID_RESOLUTION
@@ -384,8 +359,24 @@ def main():
 
         label_names = load_label_names()
 
+        # Fit SVC, predict on grid, release GPU memory — one brain at a time
+        print("Fitting SVCs and predicting on grid (one at a time for GPU memory)...")
+        all_grid_preds = {}
+        for brain in brain_data:
+            name = brain["name"]
+            print(f"  {name}...")
+            grid_preds = fit_predict_and_release(
+                brain["xy"], brain["predictions"], X_grid
+            )
+            all_grid_preds[name] = {
+                "condition": brain["condition"],
+                "grid_preds": grid_preds,
+            }
+
         print("Computing all region areas...")
-        df = compute_all_areas(all_brains, X_grid, pixel_area_per_point.ravel(), label_names)
+        df = compute_all_areas_from_grid_preds(
+            all_grid_preds, pixel_area_per_point.ravel(), label_names
+        )
 
         df.to_csv(csv_path, index=False)
         print(f"\nSaved CSV: {csv_path} ({len(df)} rows)")
