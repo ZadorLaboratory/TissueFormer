@@ -213,7 +213,13 @@ def fit_predict_and_release(xy, predictions, X_grid):
     try:
         import cupy as cp
         cp.get_default_memory_pool().free_all_blocks()
-    except ImportError:
+        cp.get_default_pinned_memory_pool().free_all_blocks()
+    except (ImportError, Exception):
+        pass
+    try:
+        import torch
+        torch.cuda.empty_cache()
+    except (ImportError, Exception):
         pass
 
     return grid_preds
@@ -369,6 +375,24 @@ BRAIN_ORDER = ["D076_1L", "D077_1L", "D078_1L", "D079_3L",
 HIGHER_VISUAL_LABELS = [113, 117, 120, 121, 123, 135, 136, 137, 138, 139, 159]
 
 
+def _save_fig(fig, basename, dpi=150):
+    """Save figure as both PNG and PDF."""
+    for ext in ("png", "pdf"):
+        out = os.path.join(OUTPUT_DIR, f"{basename}.{ext}")
+        fig.savefig(out, dpi=dpi, bbox_inches="tight")
+    print(f"  Saved {os.path.join(OUTPUT_DIR, basename)}.{{png,pdf}}")
+
+
+def _make_visp_hva_rgb(preds, mask_2d):
+    """Build RGB array: white outside, gray cortex, blue VISp, red HVA."""
+    rgb = np.ones((*preds.shape, 3))
+    rgb[mask_2d] = 0.9
+    rgb[mask_2d & (preds == VISP_LABEL)] = [0.3, 0.5, 0.9]
+    for lbl in HIGHER_VISUAL_LABELS:
+        rgb[mask_2d & (preds == lbl)] = [0.9, 0.3, 0.2]
+    return rgb
+
+
 def plot_diagnostic_svc_maps(all_grid_preds, grid_shape, cortical_mask):
     """Plot SVC prediction maps for all 8 brains, masked to cortical region."""
     mask_2d = cortical_mask.reshape(grid_shape)
@@ -382,33 +406,38 @@ def plot_diagnostic_svc_maps(all_grid_preds, grid_shape, cortical_mask):
         ax.set_title(f"{name} ({cond})\n{n_labels} labels")
     plt.suptitle("SVC prediction maps — cortical mask (all cuML)", fontsize=14)
     plt.tight_layout()
-    out = os.path.join(OUTPUT_DIR, "diagnostic_svc_maps.png")
-    fig.savefig(out, dpi=150, bbox_inches="tight")
+    _save_fig(fig, "diagnostic_svc_maps")
     plt.close(fig)
-    print(f"  Saved {out}")
 
 
 def plot_diagnostic_visp_hva(all_grid_preds, grid_shape, cortical_mask):
     """Plot VISp (blue) vs Higher Visual Areas (red) vs other (gray), masked."""
     mask_2d = cortical_mask.reshape(grid_shape)
+
+    # Annotated version
     fig, axes = plt.subplots(2, 4, figsize=(20, 10))
     for ax, name in zip(axes.ravel(), BRAIN_ORDER):
         preds = all_grid_preds[name]["grid_preds"].reshape(grid_shape)
-        rgb = np.ones((*preds.shape, 3))  # white background
-        rgb[mask_2d] = 0.9  # gray for cortex
-        rgb[mask_2d & (preds == VISP_LABEL)] = [0.3, 0.5, 0.9]
-        for lbl in HIGHER_VISUAL_LABELS:
-            rgb[mask_2d & (preds == lbl)] = [0.9, 0.3, 0.2]
+        rgb = _make_visp_hva_rgb(preds, mask_2d)
         ax.imshow(rgb, origin="lower", aspect="auto")
         visp_n = (mask_2d & (preds == VISP_LABEL)).sum()
         hva_n = sum((mask_2d & (preds == lbl)).sum() for lbl in HIGHER_VISUAL_LABELS)
         ax.set_title(f"{name}\nVISp={visp_n}px  HVA={hva_n}px")
     plt.suptitle("VISp (blue) vs Higher Visual Areas (red) — cortical mask", fontsize=14)
     plt.tight_layout()
-    out = os.path.join(OUTPUT_DIR, "diagnostic_visp_vs_hva.png")
-    fig.savefig(out, dpi=150, bbox_inches="tight")
+    _save_fig(fig, "diagnostic_visp_vs_hva")
     plt.close(fig)
-    print(f"  Saved {out}")
+
+    # Clean version — no axes, titles, or labels
+    fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+    for ax, name in zip(axes.ravel(), BRAIN_ORDER):
+        preds = all_grid_preds[name]["grid_preds"].reshape(grid_shape)
+        rgb = _make_visp_hva_rgb(preds, mask_2d)
+        ax.imshow(rgb, origin="lower", aspect="auto")
+        ax.axis("off")
+    plt.subplots_adjust(wspace=0.02, hspace=0.02)
+    _save_fig(fig, "visp_vs_hva_clean", dpi=300)
+    plt.close(fig)
 
 
 def main():
