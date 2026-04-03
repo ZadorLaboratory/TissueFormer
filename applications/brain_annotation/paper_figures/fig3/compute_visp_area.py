@@ -322,11 +322,56 @@ def plot_visp_ratio(df_all):
                        "VISp / visual areas", "visp_ratio_comparison")
 
 
+BRAIN_ORDER = ["D076_1L", "D077_1L", "D078_1L", "D079_3L",
+               "D076_4L", "D077_2L", "D078_2L", "D079_4L"]
+
+HIGHER_VISUAL_LABELS = [113, 117, 120, 121, 123, 135, 136, 137, 138, 139, 159]
+
+
+def plot_diagnostic_svc_maps(all_grid_preds, grid_shape):
+    """Plot SVC prediction maps for all 8 brains on the shared grid."""
+    fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+    for ax, name in zip(axes.ravel(), BRAIN_ORDER):
+        preds = all_grid_preds[name]["grid_preds"].reshape(grid_shape)
+        cond = all_grid_preds[name]["condition"]
+        ax.imshow(preds, origin="lower", aspect="auto", cmap="tab20")
+        ax.set_title(f"{name} ({cond})\n{len(np.unique(preds))} labels")
+    plt.suptitle("SVC prediction maps on shared grid (all cuML)", fontsize=14)
+    plt.tight_layout()
+    out = os.path.join(OUTPUT_DIR, "diagnostic_svc_maps.png")
+    fig.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved {out}")
+
+
+def plot_diagnostic_visp_hva(all_grid_preds, grid_shape):
+    """Plot VISp (blue) vs Higher Visual Areas (red) vs other (gray) for all brains."""
+    fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+    for ax, name in zip(axes.ravel(), BRAIN_ORDER):
+        preds = all_grid_preds[name]["grid_preds"].reshape(grid_shape)
+        rgb = np.ones((*preds.shape, 3)) * 0.9
+        rgb[preds == VISP_LABEL] = [0.3, 0.5, 0.9]
+        for lbl in HIGHER_VISUAL_LABELS:
+            rgb[preds == lbl] = [0.9, 0.3, 0.2]
+        ax.imshow(rgb, origin="lower", aspect="auto")
+        visp_n = (preds == VISP_LABEL).sum()
+        hva_n = sum((preds == lbl).sum() for lbl in HIGHER_VISUAL_LABELS)
+        ax.set_title(f"{name}\nVISp={visp_n}px  HVA={hva_n}px")
+    plt.suptitle("VISp (blue) vs Higher Visual Areas (red) vs Other (gray)", fontsize=14)
+    plt.tight_layout()
+    out = os.path.join(OUTPUT_DIR, "diagnostic_visp_vs_hva.png")
+    fig.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved {out}")
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--plot-only", action="store_true",
                         help="Skip computation, just re-plot from existing all_area_results.csv")
+    parser.add_argument("--diagnostics", action="store_true",
+                        help="Save diagnostic SVC maps (requires full computation)")
     args = parser.parse_args()
 
     warnings.filterwarnings("ignore", module="cuml.*")
@@ -372,6 +417,12 @@ def main():
                 "condition": brain["condition"],
                 "grid_preds": grid_preds,
             }
+
+        if args.diagnostics:
+            grid_shape = (GRID_RESOLUTION, GRID_RESOLUTION)
+            print("\nSaving diagnostic plots...")
+            plot_diagnostic_svc_maps(all_grid_preds, grid_shape)
+            plot_diagnostic_visp_hva(all_grid_preds, grid_shape)
 
         print("Computing all region areas...")
         df = compute_all_areas_from_grid_preds(
