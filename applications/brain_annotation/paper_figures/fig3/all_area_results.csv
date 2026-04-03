@@ -1,323 +1,321 @@
 brain,condition,label,area_name,area_mm2,pixel_count
 D076_1L,control,5,Primary auditory area,1.90433360736,7646
-D076_1L,control,9,Dorsal auditory area,1.14521752415,4257
+D076_1L,control,9,Dorsal auditory area,1.14468779064,4255
 D076_1L,control,12,Ventral auditory area,1.19289759721,5158
-D076_1L,control,15,Posterior auditory area,0.352217460557,1403
-D076_1L,control,20,"Agranular insular area, dorsal part",2.57457992409,10938
+D076_1L,control,15,Posterior auditory area,0.351959583682,1402
+D076_1L,control,20,"Agranular insular area, dorsal part",2.57434985193,10937
 D076_1L,control,25,Gustatory areas,0.844350255753,3827
-D076_1L,control,39,"Agranular insular area, posterior part",1.57399972989,13894
-D076_1L,control,44,"Agranular insular area, ventral part",1.56746498624,54741
+D076_1L,control,39,"Agranular insular area, posterior part",1.29712029118,6443
+D076_1L,control,44,"Agranular insular area, ventral part",1.17334598704,4853
 D076_1L,control,78,Anterior area,0.797491279904,3042
 D076_1L,control,79,Laterointermediate area,0.336687711898,1465
-D076_1L,control,80,Postrhinal area,1.7409164797,16245
-D076_1L,control,87,"Primary somatosensory area, barrel field",4.80973593309,17973
+D076_1L,control,80,Postrhinal area,1.56274259701,8382
+D076_1L,control,87,"Primary somatosensory area, barrel field",4.80946848917,17972
 D076_1L,control,90,"Primary somatosensory area, lower limb",0.849821487875,3457
-D076_1L,control,93,"Primary somatosensory area, mouth",4.83004564109,19327
+D076_1L,control,93,"Primary somatosensory area, mouth",4.82982900538,19326
 D076_1L,control,97,"Primary somatosensory area, nose",1.71583185424,6400
 D076_1L,control,100,"Primary somatosensory area, trunk",0.978792755931,3769
-D076_1L,control,103,"Primary somatosensory area, upper limb",2.59501563146,10680
+D076_1L,control,103,"Primary somatosensory area, upper limb",2.59476697906,10679
 D076_1L,control,106,Supplemental somatosensory area,4.96159993136,19387
-D076_1L,control,110,Primary visual area,9.53370148918,41927
+D076_1L,control,110,Primary visual area,9.48557347406,41610
 D076_1L,control,112,"Anterior cingulate area, dorsal part",6.7872923146,28641
 D076_1L,control,113,Anteromedial visual area,0.199894658977,786
 D076_1L,control,117,Anterolateral visual area,0.617778966214,2295
 D076_1L,control,120,Lateral visual area,1.31422334779,5360
 D076_1L,control,121,Rostrolateral visual area,0.714078982997,2647
-D076_1L,control,123,Posterolateral visual area,2.0597353089,22429
-D076_1L,control,134,"Anterior cingulate area, ventral part",4.950312302,23812
+D076_1L,control,123,Posterolateral visual area,1.66427606023,6436
+D076_1L,control,134,"Anterior cingulate area, ventral part",4.38752912579,17625
 D076_1L,control,159,posteromedial visual area,0.705618521047,2749
 D076_1L,control,161,Temporal association areas,1.89131229044,8690
-D076_1L,control,185,Visceral area,0.953375638367,4068
+D076_1L,control,185,Visceral area,0.953129878974,4067
 D076_1L,control,193,Cortical subplate,0.0829245830135,298
-D076_1L,control,198,"Orbital area, lateral part",5.15624585708,27357
-D076_1L,control,243,"Retrosplenial area, dorsal part",4.23486807706,22036
-D076_1L,control,246,"Retrosplenial area, ventral part",6.00472916454,41116
-D076_1L,control,248,"Retrosplenial area, lateral agranular part",2.51200358987,12694
-D076_1L,control,249,Ectorhinal area,6.75128076311,41506
-D076_1L,control,259,Perirhinal area,0.0458169275918,17667
-D076_1L,control,284,Primary motor area,8.03602050712,34230
+D076_1L,control,198,"Orbital area, lateral part",4.96251896057,21662
+D076_1L,control,243,"Retrosplenial area, dorsal part",4.04954474445,20723
+D076_1L,control,246,"Retrosplenial area, ventral part",4.81469453055,24193
+D076_1L,control,248,"Retrosplenial area, lateral agranular part",2.509571243,12678
+D076_1L,control,249,Ectorhinal area,5.46700378776,23972
+D076_1L,control,259,Perirhinal area,0.0201316377981,107
+D076_1L,control,284,Primary motor area,8.03440040895,34223
 D076_1L,control,288,Secondary motor area,4.62337647422,18583
 D077_1L,control,5,Primary auditory area,1.46512873976,5751
-D077_1L,control,9,Dorsal auditory area,1.78227686759,6575
+D077_1L,control,9,Dorsal auditory area,1.78200654075,6574
 D077_1L,control,12,Ventral auditory area,1.26154028875,5303
 D077_1L,control,15,Posterior auditory area,0.655863108735,2734
 D077_1L,control,20,"Agranular insular area, dorsal part",1.73970135714,7488
-D077_1L,control,25,Gustatory areas,1.14016707244,5007
-D077_1L,control,39,"Agranular insular area, posterior part",2.86056281827,38835
-D077_1L,control,44,"Agranular insular area, ventral part",0.525515367857,20644
+D077_1L,control,25,Gustatory areas,1.13972036457,5005
+D077_1L,control,39,"Agranular insular area, posterior part",2.609176344,12422
+D077_1L,control,44,"Agranular insular area, ventral part",0.358897004881,1646
 D077_1L,control,59,"Primary somatosensory area, unassigned",0.899934798269,3813
-D077_1L,control,60,"Frontal pole, cerebral cortex",6.90646986679,34078
-D077_1L,control,78,Anterior area,1.69176758661,6433
-D077_1L,control,79,Laterointermediate area,0.331762722928,1822
-D077_1L,control,80,Postrhinal area,1.01146847883,24387
-D077_1L,control,87,"Primary somatosensory area, barrel field",4.35229760148,16429
+D077_1L,control,60,"Frontal pole, cerebral cortex",6.90587466703,34075
+D077_1L,control,78,Anterior area,1.69149508739,6432
+D077_1L,control,79,Laterointermediate area,0.331762722928,1557
+D077_1L,control,80,Postrhinal area,0.852387786896,4772
+D077_1L,control,87,"Primary somatosensory area, barrel field",4.35204894908,16428
 D077_1L,control,90,"Primary somatosensory area, lower limb",1.04211810464,4288
 D077_1L,control,93,"Primary somatosensory area, mouth",2.63867707925,10692
 D077_1L,control,97,"Primary somatosensory area, nose",2.90209445279,11612
-D077_1L,control,100,"Primary somatosensory area, trunk",1.09800545219,4307
-D077_1L,control,103,"Primary somatosensory area, upper limb",0.865701708081,3831
+D077_1L,control,100,"Primary somatosensory area, trunk",1.09775736405,4306
+D077_1L,control,103,"Primary somatosensory area, upper limb",0.865487390234,3830
 D077_1L,control,106,Supplemental somatosensory area,4.88017207757,18516
-D077_1L,control,110,Primary visual area,9.15856100189,49133
+D077_1L,control,110,Primary visual area,8.76440596187,35403
 D077_1L,control,112,"Anterior cingulate area, dorsal part",3.28326957321,12465
 D077_1L,control,113,Anteromedial visual area,0.852254141517,3215
-D077_1L,control,117,Anterolateral visual area,0.779671729077,3040
-D077_1L,control,120,Lateral visual area,1.27893521838,9182
-D077_1L,control,121,Rostrolateral visual area,1.24256938986,4611
-D077_1L,control,125,Infralimbic area,0.00551092552092,149
-D077_1L,control,134,"Anterior cingulate area, ventral part",5.5112562058,32083
+D077_1L,control,117,Anterolateral visual area,0.779154445534,3038
+D077_1L,control,120,Lateral visual area,1.22443335018,6062
+D077_1L,control,121,Rostrolateral visual area,1.24230194594,4610
+D077_1L,control,134,"Anterior cingulate area, ventral part",4.83740455152,18521
 D077_1L,control,159,posteromedial visual area,0.321744411655,1220
 D077_1L,control,161,Temporal association areas,2.3493796052,10419
 D077_1L,control,185,Visceral area,0.901826866914,3573
-D077_1L,control,193,Cortical subplate,5.80149515339,37536
-D077_1L,control,198,"Orbital area, lateral part",2.87277240551,13505
-D077_1L,control,243,"Retrosplenial area, dorsal part",4.25964044239,23076
-D077_1L,control,246,"Retrosplenial area, ventral part",7.80210999886,51794
-D077_1L,control,248,"Retrosplenial area, lateral agranular part",2.98037275727,18052
-D077_1L,control,249,Ectorhinal area,1.99728616388,11232
-D077_1L,control,259,Perirhinal area,0.189320376031,3082
+D077_1L,control,193,Cortical subplate,5.49372598351,23283
+D077_1L,control,198,"Orbital area, lateral part",1.9916945488,6693
+D077_1L,control,243,"Retrosplenial area, dorsal part",4.215107403,22600
+D077_1L,control,246,"Retrosplenial area, ventral part",6.40181162964,33353
+D077_1L,control,248,"Retrosplenial area, lateral agranular part",2.81984646579,12735
+D077_1L,control,249,Ectorhinal area,1.84454516873,8222
+D077_1L,control,259,Perirhinal area,0.10496385545,506
 D077_1L,control,280,Prelimbic area,0.0192041018112,87
-D077_1L,control,284,Primary motor area,5.44388995813,23062
-D077_1L,control,288,Secondary motor area,4.84329357963,19439
-D078_1L,control,5,Primary auditory area,1.7794972927,6577
-D078_1L,control,9,Dorsal auditory area,0.94432532057,3504
+D077_1L,control,284,Primary motor area,5.44294172736,23058
+D077_1L,control,288,Secondary motor area,4.84309108167,19438
+D078_1L,control,5,Primary auditory area,1.77922696587,6576
+D078_1L,control,9,Dorsal auditory area,0.944057876649,3503
 D078_1L,control,12,Ventral auditory area,1.96463873175,7813
-D078_1L,control,15,Posterior auditory area,0.630696452912,2462
-D078_1L,control,20,"Agranular insular area, dorsal part",3.62401696339,15493
-D078_1L,control,25,Gustatory areas,1.38674476246,5953
-D078_1L,control,39,"Agranular insular area, posterior part",3.62280585854,61437
-D078_1L,control,44,"Agranular insular area, ventral part",1.85515018699,23015
+D078_1L,control,15,Posterior auditory area,0.630179169369,2460
+D078_1L,control,20,"Agranular insular area, dorsal part",3.62363032335,15491
+D078_1L,control,25,Gustatory areas,1.38652812675,5952
+D078_1L,control,39,"Agranular insular area, posterior part",3.23910556803,15363
+D078_1L,control,44,"Agranular insular area, ventral part",1.50284956979,6011
 D078_1L,control,78,Anterior area,0.526630258662,1987
 D078_1L,control,79,Laterointermediate area,0.000422721813138,2
-D078_1L,control,80,Postrhinal area,1.62787860053,23351
+D078_1L,control,80,Postrhinal area,1.51051027929,8073
 D078_1L,control,87,"Primary somatosensory area, barrel field",3.03051693323,11333
 D078_1L,control,90,"Primary somatosensory area, lower limb",1.39762788506,5615
-D078_1L,control,93,"Primary somatosensory area, mouth",6.30564882259,26362
+D078_1L,control,93,"Primary somatosensory area, mouth",6.30518726986,26360
 D078_1L,control,100,"Primary somatosensory area, trunk",0.529805354187,2017
-D078_1L,control,103,"Primary somatosensory area, upper limb",2.41332621911,9882
+D078_1L,control,103,"Primary somatosensory area, upper limb",2.41284824119,9880
 D078_1L,control,106,Supplemental somatosensory area,5.95180347335,22497
-D078_1L,control,110,Primary visual area,8.85310593581,37635
+D078_1L,control,110,Primary visual area,8.84827767104,37610
 D078_1L,control,112,"Anterior cingulate area, dorsal part",2.78911952792,11082
 D078_1L,control,113,Anteromedial visual area,0.473647081882,1803
 D078_1L,control,117,Anterolateral visual area,0.922794158254,3421
 D078_1L,control,120,Lateral visual area,0.553515810921,2375
 D078_1L,control,121,Rostrolateral visual area,0.512077357931,1902
-D078_1L,control,123,Posterolateral visual area,2.02172715709,23055
-D078_1L,control,125,Infralimbic area,0.808576876043,13028
-D078_1L,control,134,"Anterior cingulate area, ventral part",1.99367971852,8180
+D078_1L,control,123,Posterolateral visual area,1.60246053215,6238
+D078_1L,control,125,Infralimbic area,0.413305974268,735
+D078_1L,control,134,"Anterior cingulate area, ventral part",1.93720337461,7935
 D078_1L,control,159,posteromedial visual area,0.0733606865631,282
 D078_1L,control,161,Temporal association areas,2.8451410897,12427
 D078_1L,control,185,Visceral area,1.69051075457,6798
-D078_1L,control,198,"Orbital area, lateral part",2.29521743223,12388
-D078_1L,control,201,"Orbital area, medial part",0.967104842492,2052
-D078_1L,control,205,"Orbital area, ventrolateral part",2.63659274228,13344
-D078_1L,control,243,"Retrosplenial area, dorsal part",3.89892957067,20844
-D078_1L,control,246,"Retrosplenial area, ventral part",6.39620258424,44185
+D078_1L,control,198,"Orbital area, lateral part",2.18142772847,10981
+D078_1L,control,201,"Orbital area, medial part",0.782086112525,1761
+D078_1L,control,205,"Orbital area, ventrolateral part",1.66370781419,4606
+D078_1L,control,243,"Retrosplenial area, dorsal part",3.70988827727,20158
+D078_1L,control,246,"Retrosplenial area, ventral part",5.16689380384,26304
 D078_1L,control,248,"Retrosplenial area, lateral agranular part",2.5484478929,11823
-D078_1L,control,249,Ectorhinal area,1.59980263073,7118
-D078_1L,control,259,Perirhinal area,1.83983922394,17655
-D078_1L,control,280,Prelimbic area,2.63087763132,13094
-D078_1L,control,284,Primary motor area,5.58074080952,23220
-D078_1L,control,288,Secondary motor area,10.4230422025,45489
+D078_1L,control,249,Ectorhinal area,1.59955687134,7117
+D078_1L,control,259,Perirhinal area,1.55333640602,7706
+D078_1L,control,280,Prelimbic area,2.60046768991,13046
+D078_1L,control,284,Primary motor area,5.57931597902,23214
+D078_1L,control,288,Secondary motor area,10.4228397046,45488
 D079_3L,control,5,Primary auditory area,2.03218451094,8018
 D079_3L,control,9,Dorsal auditory area,0.787014379115,2854
 D079_3L,control,12,Ventral auditory area,0.76774045981,3363
 D079_3L,control,15,Posterior auditory area,0.000785325797351,3
-D079_3L,control,20,"Agranular insular area, dorsal part",2.66258134193,10963
-D079_3L,control,25,Gustatory areas,0.920629381591,4051
-D079_3L,control,39,"Agranular insular area, posterior part",1.99271729485,19368
-D079_3L,control,44,"Agranular insular area, ventral part",1.53613534269,52400
+D079_3L,control,20,"Agranular insular area, dorsal part",2.66233235209,10962
+D079_3L,control,25,Gustatory areas,0.920399309424,4050
+D079_3L,control,39,"Agranular insular area, posterior part",1.70930560385,8446
+D079_3L,control,44,"Agranular insular area, ventral part",1.19778657759,4858
 D079_3L,control,59,"Primary somatosensory area, unassigned",0.605061428631,2547
-D079_3L,control,78,Anterior area,1.20736507601,4539
+D079_3L,control,78,Anterior area,1.20709257679,4538
 D079_3L,control,79,Laterointermediate area,0.529182168106,2285
-D079_3L,control,80,Postrhinal area,1.23591930809,8640
-D079_3L,control,87,"Primary somatosensory area, barrel field",5.10598802574,19421
+D079_3L,control,80,Postrhinal area,1.11011135364,6110
+D079_3L,control,87,"Primary somatosensory area, barrel field",5.10573937335,19420
 D079_3L,control,90,"Primary somatosensory area, lower limb",0.926749181437,3798
-D079_3L,control,93,"Primary somatosensory area, mouth",3.66749828799,15167
+D079_3L,control,93,"Primary somatosensory area, mouth",3.66725105311,15166
 D079_3L,control,97,"Primary somatosensory area, nose",3.13745341291,12563
 D079_3L,control,100,"Primary somatosensory area, trunk",1.39210476392,5421
-D079_3L,control,103,"Primary somatosensory area, upper limb",1.2319590907,5396
-D079_3L,control,106,Supplemental somatosensory area,5.62535368283,21762
-D079_3L,control,110,Primary visual area,8.82010950282,35667
-D079_3L,control,112,"Anterior cingulate area, dorsal part",4.07820157384,17941
+D079_3L,control,103,"Primary somatosensory area, upper limb",1.23151544732,5394
+D079_3L,control,106,Supplemental somatosensory area,5.62513704712,21761
+D079_3L,control,110,Primary visual area,8.81910207142,35663
+D079_3L,control,112,"Anterior cingulate area, dorsal part",4.07799907588,17940
 D079_3L,control,113,Anteromedial visual area,0.323862003405,1222
-D079_3L,control,117,Anterolateral visual area,0.800699309926,3061
+D079_3L,control,117,Anterolateral visual area,0.800169576424,3059
 D079_3L,control,120,Lateral visual area,1.45110856201,6743
-D079_3L,control,121,Rostrolateral visual area,1.28262345119,4764
-D079_3L,control,123,Posterolateral visual area,0.812326416032,36128
-D079_3L,control,125,Infralimbic area,1.36574379761,7621
-D079_3L,control,134,"Anterior cingulate area, ventral part",2.66955881181,11042
+D079_3L,control,121,Rostrolateral visual area,1.28235600727,4763
+D079_3L,control,123,Posterolateral visual area,0.466842970445,1914
+D079_3L,control,125,Infralimbic area,0.90641848443,1929
+D079_3L,control,134,"Anterior cingulate area, ventral part",2.6028372012,10746
 D079_3L,control,159,posteromedial visual area,0.0169120871923,62
 D079_3L,control,161,Temporal association areas,1.75579096709,7861
 D079_3L,control,185,Visceral area,1.67316292182,7075
-D079_3L,control,198,"Orbital area, lateral part",3.34852344634,20826
-D079_3L,control,201,"Orbital area, medial part",0.0,6260
-D079_3L,control,205,"Orbital area, ventrolateral part",3.3428167156,15537
-D079_3L,control,243,"Retrosplenial area, dorsal part",5.59809459977,33195
-D079_3L,control,246,"Retrosplenial area, ventral part",7.90869064187,49587
-D079_3L,control,248,"Retrosplenial area, lateral agranular part",2.50039532415,10132
-D079_3L,control,249,Ectorhinal area,1.15021654238,5207
-D079_3L,control,259,Perirhinal area,0.61311171503,5167
-D079_3L,control,280,Prelimbic area,1.49996444241,7466
-D079_3L,control,284,Primary motor area,5.56400141481,23490
+D079_3L,control,198,"Orbital area, lateral part",3.13809619198,15217
+D079_3L,control,205,"Orbital area, ventrolateral part",2.2061860871,5797
+D079_3L,control,243,"Retrosplenial area, dorsal part",5.41129177933,27514
+D079_3L,control,246,"Retrosplenial area, ventral part",6.52054571982,34553
+D079_3L,control,248,"Retrosplenial area, lateral agranular part",2.5001478017,10131
+D079_3L,control,249,Ectorhinal area,1.12033971408,5040
+D079_3L,control,259,Perirhinal area,0.451265936156,2126
+D079_3L,control,280,Prelimbic area,1.49749261186,7461
+D079_3L,control,284,Primary motor area,5.56282410675,23485
 D079_3L,control,288,Secondary motor area,10.0052528457,43887
-D077_2L,enucleated,5,Primary auditory area,1.91283616798,7344
-D077_2L,enucleated,9,Dorsal auditory area,1.80246762283,6667
+D077_2L,enucleated,5,Primary auditory area,1.91256584114,7343
+D077_2L,enucleated,9,Dorsal auditory area,1.80194077224,6665
 D077_2L,enucleated,12,Ventral auditory area,2.14476372591,8886
 D077_2L,enucleated,15,Posterior auditory area,1.02962501895,4170
-D077_2L,enucleated,20,"Agranular insular area, dorsal part",2.78770193559,11461
-D077_2L,enucleated,25,Gustatory areas,1.06142381295,4643
-D077_2L,enucleated,39,"Agranular insular area, posterior part",2.88642972698,16842
-D077_2L,enucleated,44,"Agranular insular area, ventral part",2.11930333324,64529
+D077_2L,enucleated,20,"Agranular insular area, dorsal part",2.78745294574,11460
+D077_2L,enucleated,25,Gustatory areas,1.06120717724,4642
+D077_2L,enucleated,39,"Agranular insular area, posterior part",2.70409094969,12839
+D077_2L,enucleated,44,"Agranular insular area, ventral part",1.64358833475,6840
 D077_2L,enucleated,59,"Primary somatosensory area, unassigned",0.115745116836,493
 D077_2L,enucleated,78,Anterior area,1.32333943866,5022
 D077_2L,enucleated,79,Laterointermediate area,0.00213692959556,10
-D077_2L,enucleated,80,Postrhinal area,1.66519206993,17206
-D077_2L,enucleated,87,"Primary somatosensory area, barrel field",6.69611766326,25940
+D077_2L,enucleated,80,Postrhinal area,1.50937998875,8249
+D077_2L,enucleated,87,"Primary somatosensory area, barrel field",6.69586901087,25939
 D077_2L,enucleated,90,"Primary somatosensory area, lower limb",1.16313433767,4799
-D077_2L,enucleated,93,"Primary somatosensory area, mouth",4.41340170535,18386
-D077_2L,enucleated,100,"Primary somatosensory area, trunk",1.25838956997,4929
-D077_2L,enucleated,103,"Primary somatosensory area, upper limb",1.67235233251,7271
+D077_2L,enucleated,93,"Primary somatosensory area, mouth",4.41315447047,18385
+D077_2L,enucleated,100,"Primary somatosensory area, trunk",1.25814148183,4928
+D077_2L,enucleated,103,"Primary somatosensory area, upper limb",1.67190868913,7269
 D077_2L,enucleated,106,Supplemental somatosensory area,5.28065603937,20128
-D077_2L,enucleated,110,Primary visual area,6.41202056842,25718
+D077_2L,enucleated,110,Primary visual area,6.4117480692,25717
 D077_2L,enucleated,112,"Anterior cingulate area, dorsal part",2.35975358116,9626
 D077_2L,enucleated,113,Anteromedial visual area,0.219586314152,834
-D077_2L,enucleated,117,Anterolateral visual area,0.570617721034,2124
+D077_2L,enucleated,117,Anterolateral visual area,0.570359844159,2123
 D077_2L,enucleated,120,Lateral visual area,1.15829731477,4973
 D077_2L,enucleated,121,Rostrolateral visual area,0.663119846777,2467
-D077_2L,enucleated,123,Posterolateral visual area,1.14870039291,23062
-D077_2L,enucleated,125,Infralimbic area,0.901986698263,12741
-D077_2L,enucleated,134,"Anterior cingulate area, ventral part",1.85266541862,7544
+D077_2L,enucleated,123,Posterolateral visual area,0.870071381265,3108
+D077_2L,enucleated,125,Infralimbic area,0.682863414998,1544
+D077_2L,enucleated,134,"Anterior cingulate area, ventral part",1.79849909069,7309
 D077_2L,enucleated,159,posteromedial visual area,0.575976369981,2151
 D077_2L,enucleated,161,Temporal association areas,2.29206072879,10331
 D077_2L,enucleated,185,Visceral area,1.10750387611,4477
-D077_2L,enucleated,198,"Orbital area, lateral part",2.5559534788,12920
-D077_2L,enucleated,201,"Orbital area, medial part",2.14940822083,8472
-D077_2L,enucleated,205,"Orbital area, ventrolateral part",2.2027873256,10952
-D077_2L,enucleated,243,"Retrosplenial area, dorsal part",5.15745262612,28351
-D077_2L,enucleated,246,"Retrosplenial area, ventral part",7.67574727985,51066
-D077_2L,enucleated,248,"Retrosplenial area, lateral agranular part",3.43148556267,15077
-D077_2L,enucleated,249,Ectorhinal area,1.49938042983,6895
-D077_2L,enucleated,259,Perirhinal area,0.984892877093,15189
-D077_2L,enucleated,280,Prelimbic area,2.83861655929,15645
-D077_2L,enucleated,284,Primary motor area,5.08104568333,21256
+D077_2L,enucleated,198,"Orbital area, lateral part",2.43893156903,11446
+D077_2L,enucleated,201,"Orbital area, medial part",1.43905369997,2837
+D077_2L,enucleated,205,"Orbital area, ventrolateral part",1.51219130534,5616
+D077_2L,enucleated,243,"Retrosplenial area, dorsal part",5.02360522695,26659
+D077_2L,enucleated,246,"Retrosplenial area, ventral part",6.24770576667,32423
+D077_2L,enucleated,248,"Retrosplenial area, lateral agranular part",3.43123804022,15076
+D077_2L,enucleated,249,Ectorhinal area,1.49913467043,6775
+D077_2L,enucleated,259,Perirhinal area,0.694441162072,3387
+D077_2L,enucleated,280,Prelimbic area,2.8384789091,15644
+D077_2L,enucleated,284,Primary motor area,5.08011646341,21252
 D077_2L,enucleated,288,Secondary motor area,9.77151413393,41903
-D078_2L,enucleated,5,Primary auditory area,2.33885015107,9065
+D078_2L,enucleated,5,Primary auditory area,2.33857982424,9064
 D078_2L,enucleated,9,Dorsal auditory area,0.883759885424,3290
 D078_2L,enucleated,12,Ventral auditory area,1.32020001767,5584
-D078_2L,enucleated,20,"Agranular insular area, dorsal part",2.52466714108,10764
-D078_2L,enucleated,25,Gustatory areas,0.520162323584,2303
-D078_2L,enucleated,39,"Agranular insular area, posterior part",2.1830851545,42398
-D078_2L,enucleated,44,"Agranular insular area, ventral part",1.54352261745,33208
+D078_2L,enucleated,20,"Agranular insular area, dorsal part",2.50421777146,10589
+D078_2L,enucleated,25,Gustatory areas,0.519932251417,2302
+D078_2L,enucleated,39,"Agranular insular area, posterior part",1.81948908631,8956
+D078_2L,enucleated,44,"Agranular insular area, ventral part",1.23161061957,4824
 D078_2L,enucleated,59,"Primary somatosensory area, unassigned",0.0117615206936,48
 D078_2L,enucleated,78,Anterior area,1.15993843147,4382
 D078_2L,enucleated,79,Laterointermediate area,0.0576657779769,260
-D078_2L,enucleated,80,Postrhinal area,1.86400102111,13870
-D078_2L,enucleated,87,"Primary somatosensory area, barrel field",4.04589776555,15194
+D078_2L,enucleated,80,Postrhinal area,1.70441480199,9257
+D078_2L,enucleated,87,"Primary somatosensory area, barrel field",4.04563032163,15193
 D078_2L,enucleated,90,"Primary somatosensory area, lower limb",1.04849239877,4261
 D078_2L,enucleated,93,"Primary somatosensory area, mouth",1.57806800326,6341
 D078_2L,enucleated,97,"Primary somatosensory area, nose",5.45082012511,21306
 D078_2L,enucleated,100,"Primary somatosensory area, trunk",0.542907711823,2073
-D078_2L,enucleated,103,"Primary somatosensory area, upper limb",1.75354194387,7244
-D078_2L,enucleated,106,Supplemental somatosensory area,5.45611367669,21510
-D078_2L,enucleated,110,Primary visual area,6.50058478013,26466
-D078_2L,enucleated,112,"Anterior cingulate area, dorsal part",4.01841327856,17529
+D078_2L,enucleated,103,"Primary somatosensory area, upper limb",1.75329329147,7243
+D078_2L,enucleated,106,Supplemental somatosensory area,5.45589704098,21509
+D078_2L,enucleated,110,Primary visual area,6.4998352256,26463
+D078_2L,enucleated,112,"Anterior cingulate area, dorsal part",4.0182107806,17528
 D078_2L,enucleated,113,Anteromedial visual area,0.77723148133,2940
-D078_2L,enucleated,117,Anterolateral visual area,0.57668332379,2174
+D078_2L,enucleated,117,Anterolateral visual area,0.576166040247,2172
 D078_2L,enucleated,120,Lateral visual area,1.55068635742,6641
-D078_2L,enucleated,121,Rostrolateral visual area,1.14305002311,4239
-D078_2L,enucleated,123,Posterolateral visual area,0.819005558617,20637
-D078_2L,enucleated,125,Infralimbic area,2.98316355152,21974
-D078_2L,enucleated,134,"Anterior cingulate area, ventral part",2.16626408715,8985
+D078_2L,enucleated,121,Rostrolateral visual area,1.14277752389,4238
+D078_2L,enucleated,123,Posterolateral visual area,0.583384247139,2042
+D078_2L,enucleated,125,Infralimbic area,2.2801422821,7121
+D078_2L,enucleated,134,"Anterior cingulate area, ventral part",2.10579389535,8719
 D078_2L,enucleated,159,posteromedial visual area,0.0842127717537,309
 D078_2L,enucleated,161,Temporal association areas,2.41444974794,10866
-D078_2L,enucleated,185,Visceral area,1.45215661032,6076
-D078_2L,enucleated,198,"Orbital area, lateral part",3.42599324933,17712
+D078_2L,enucleated,185,Visceral area,1.45191085093,6075
+D078_2L,enucleated,198,"Orbital area, lateral part",3.24264827455,15020
 D078_2L,enucleated,201,"Orbital area, medial part",0.0450031494143,280
-D078_2L,enucleated,205,"Orbital area, ventrolateral part",2.65262967548,12226
-D078_2L,enucleated,243,"Retrosplenial area, dorsal part",5.14555995777,28188
-D078_2L,enucleated,246,"Retrosplenial area, ventral part",7.88681472394,53441
+D078_2L,enucleated,205,"Orbital area, ventrolateral part",1.76172880407,5449
+D078_2L,enucleated,243,"Retrosplenial area, dorsal part",4.91060641667,25063
+D078_2L,enucleated,246,"Retrosplenial area, ventral part",6.52058060377,34573
 D078_2L,enucleated,248,"Retrosplenial area, lateral agranular part",2.4915217651,10420
 D078_2L,enucleated,249,Ectorhinal area,0.937226987618,4181
-D078_2L,enucleated,259,Perirhinal area,0.750676594621,17644
+D078_2L,enucleated,259,Perirhinal area,0.545464456158,2701
 D078_2L,enucleated,280,Prelimbic area,2.54335581449,11679
-D078_2L,enucleated,284,Primary motor area,6.43563175926,27596
-D078_2L,enucleated,288,Secondary motor area,10.8618186402,47196
+D078_2L,enucleated,284,Primary motor area,6.43469279286,27592
+D078_2L,enucleated,288,Secondary motor area,10.8606418978,47191
 D079_4L,enucleated,5,Primary auditory area,1.82050823018,7082
 D079_4L,enucleated,9,Dorsal auditory area,0.699537555869,2538
 D079_4L,enucleated,12,Ventral auditory area,0.946362013353,4051
 D079_4L,enucleated,15,Posterior auditory area,0.613969578511,2504
 D079_4L,enucleated,20,"Agranular insular area, dorsal part",2.52691744555,10442
-D079_4L,enucleated,25,Gustatory areas,1.1894358477,5231
-D079_4L,enucleated,39,"Agranular insular area, posterior part",2.12199061081,15519
-D079_4L,enucleated,44,"Agranular insular area, ventral part",2.01995322519,62274
+D079_4L,enucleated,25,Gustatory areas,1.18920577553,5230
+D079_4L,enucleated,39,"Agranular insular area, posterior part",1.85471440293,9134
+D079_4L,enucleated,44,"Agranular insular area, ventral part",1.56178343614,6361
 D079_4L,enucleated,59,"Primary somatosensory area, unassigned",0.0503972247772,210
 D079_4L,enucleated,78,Anterior area,0.97549123764,3705
 D079_4L,enucleated,79,Laterointermediate area,0.0619925175414,280
-D079_4L,enucleated,80,Postrhinal area,1.77913189147,15616
+D079_4L,enucleated,80,Postrhinal area,1.61997984058,8725
 D079_4L,enucleated,87,"Primary somatosensory area, barrel field",4.78492020352,18178
 D079_4L,enucleated,90,"Primary somatosensory area, lower limb",0.768038231595,3140
-D079_4L,enucleated,93,"Primary somatosensory area, mouth",3.21916160706,13361
+D079_4L,enucleated,93,"Primary somatosensory area, mouth",3.21891437218,13360
 D079_4L,enucleated,97,"Primary somatosensory area, nose",3.30053760205,13103
 D079_4L,enucleated,100,"Primary somatosensory area, trunk",1.06320638308,4105
-D079_4L,enucleated,103,"Primary somatosensory area, upper limb",2.02440954479,8604
-D079_4L,enucleated,106,Supplemental somatosensory area,5.83716925422,22437
-D079_4L,enucleated,110,Primary visual area,7.198499768,29163
-D079_4L,enucleated,112,"Anterior cingulate area, dorsal part",4.12365247366,18471
+D079_4L,enucleated,103,"Primary somatosensory area, upper limb",2.02371724902,8601
+D079_4L,enucleated,106,Supplemental somatosensory area,5.83695261851,22436
+D079_4L,enucleated,110,Primary visual area,7.19754912909,29159
+D079_4L,enucleated,112,"Anterior cingulate area, dorsal part",4.12351482346,18470
 D079_4L,enucleated,113,Anteromedial visual area,0.517490814123,1969
-D079_4L,enucleated,117,Anterolateral visual area,1.32607212211,5039
+D079_4L,enucleated,117,Anterolateral visual area,1.32501706781,5035
 D079_4L,enucleated,120,Lateral visual area,1.20631924659,5343
-D079_4L,enucleated,121,Rostrolateral visual area,1.0509153916,3892
-D079_4L,enucleated,123,Posterolateral visual area,1.31168813806,34842
-D079_4L,enucleated,125,Infralimbic area,1.0892260712,5836
-D079_4L,enucleated,134,"Anterior cingulate area, ventral part",2.22127625125,9098
+D079_4L,enucleated,121,Rostrolateral visual area,1.05064289238,3891
+D079_4L,enucleated,123,Posterolateral visual area,0.924997177684,3728
+D079_4L,enucleated,125,Infralimbic area,0.753941676965,1540
+D079_4L,enucleated,134,"Anterior cingulate area, ventral part",2.16412414008,8852
 D079_4L,enucleated,159,posteromedial visual area,0.69623623556,2576
 D079_4L,enucleated,161,Temporal association areas,1.99043459469,8893
 D079_4L,enucleated,185,Visceral area,1.51012657432,6256
-D079_4L,enucleated,198,"Orbital area, lateral part",4.14909525745,22290
-D079_4L,enucleated,201,"Orbital area, medial part",2.3992001199,18278
-D079_4L,enucleated,205,"Orbital area, ventrolateral part",1.28053704819,5311
-D079_4L,enucleated,243,"Retrosplenial area, dorsal part",4.65319925173,24963
-D079_4L,enucleated,246,"Retrosplenial area, ventral part",8.17031862002,53856
-D079_4L,enucleated,248,"Retrosplenial area, lateral agranular part",2.96677113234,13164
-D079_4L,enucleated,249,Ectorhinal area,1.54480638946,7860
-D079_4L,enucleated,259,Perirhinal area,0.0619330447866,1290
-D079_4L,enucleated,280,Prelimbic area,1.64447365926,8212
-D079_4L,enucleated,284,Primary motor area,6.69668475716,28439
-D079_4L,enucleated,288,Secondary motor area,8.33350238955,35079
-D076_4L,enucleated,5,Primary auditory area,1.87741980492,7114
+D079_4L,enucleated,198,"Orbital area, lateral part",4.00940180488,20182
+D079_4L,enucleated,201,"Orbital area, medial part",1.64828343071,4120
+D079_4L,enucleated,205,"Orbital area, ventrolateral part",0.76817976216,1925
+D079_4L,enucleated,243,"Retrosplenial area, dorsal part",4.55513569,23670
+D079_4L,enucleated,246,"Retrosplenial area, ventral part",6.79545535615,35825
+D079_4L,enucleated,248,"Retrosplenial area, lateral agranular part",2.92717786877,12809
+D079_4L,enucleated,249,Ectorhinal area,1.44777431197,6578
+D079_4L,enucleated,259,Perirhinal area,0.00333707169393,17
+D079_4L,enucleated,280,Prelimbic area,1.64415213403,8211
+D079_4L,enucleated,284,Primary motor area,6.69525845926,28433
+D079_4L,enucleated,288,Secondary motor area,8.3332548671,35078
+D076_4L,enucleated,5,Primary auditory area,1.87714947809,7113
 D076_4L,enucleated,9,Dorsal auditory area,0.732685780242,2724
 D076_4L,enucleated,12,Ventral auditory area,0.98164097704,3894
-D076_4L,enucleated,15,Posterior auditory area,0.516441774855,2046
-D076_4L,enucleated,20,"Agranular insular area, dorsal part",3.91197955451,17007
-D076_4L,enucleated,25,Gustatory areas,1.21897285581,5377
-D076_4L,enucleated,39,"Agranular insular area, posterior part",2.20274574307,21843
-D076_4L,enucleated,44,"Agranular insular area, ventral part",0.222360676229,37548
+D076_4L,enucleated,15,Posterior auditory area,0.516182368186,2045
+D076_4L,enucleated,20,"Agranular insular area, dorsal part",3.7749004775,15614
+D076_4L,enucleated,25,Gustatory areas,1.2187562201,5376
+D076_4L,enucleated,39,"Agranular insular area, posterior part",1.92556713868,9450
+D076_4L,enucleated,44,"Agranular insular area, ventral part",0.0585788184474,292
 D076_4L,enucleated,78,Anterior area,1.29446463055,4875
-D076_4L,enucleated,80,Postrhinal area,2.05574829929,26080
-D076_4L,enucleated,87,"Primary somatosensory area, barrel field",5.55543252366,21314
+D076_4L,enucleated,80,Postrhinal area,1.88407365765,10019
+D076_4L,enucleated,87,"Primary somatosensory area, barrel field",5.55518387127,21313
 D076_4L,enucleated,90,"Primary somatosensory area, lower limb",0.658777570912,2731
 D076_4L,enucleated,93,"Primary somatosensory area, mouth",4.45431101199,18220
 D076_4L,enucleated,97,"Primary somatosensory area, nose",0.504311299906,1919
 D076_4L,enucleated,100,"Primary somatosensory area, trunk",1.66356393795,6485
-D076_4L,enucleated,103,"Primary somatosensory area, upper limb",1.543939518,6654
+D076_4L,enucleated,103,"Primary somatosensory area, upper limb",1.54371019247,6653
 D076_4L,enucleated,106,Supplemental somatosensory area,4.77703385232,18063
-D076_4L,enucleated,110,Primary visual area,8.59105317494,36622
+D076_4L,enucleated,110,Primary visual area,8.44158159034,35084
 D076_4L,enucleated,112,"Anterior cingulate area, dorsal part",3.34961329329,12931
 D076_4L,enucleated,113,Anteromedial visual area,0.120428446113,457
-D076_4L,enucleated,117,Anterolateral visual area,0.745923142081,2775
-D076_4L,enucleated,120,Lateral visual area,1.15994114132,4925
-D076_4L,enucleated,121,Rostrolateral visual area,0.617945461657,2286
-D076_4L,enucleated,123,Posterolateral visual area,1.3353413833,25715
-D076_4L,enucleated,125,Infralimbic area,1.60646192077,9731
-D076_4L,enucleated,134,"Anterior cingulate area, ventral part",4.04127453855,18057
+D076_4L,enucleated,117,Anterolateral visual area,0.74565569816,2774
+D076_4L,enucleated,120,Lateral visual area,1.15968326444,4924
+D076_4L,enucleated,121,Rostrolateral visual area,0.617672962442,2285
+D076_4L,enucleated,123,Posterolateral visual area,1.02278223419,4136
+D076_4L,enucleated,125,Infralimbic area,0.999298674458,2117
+D076_4L,enucleated,134,"Anterior cingulate area, ventral part",3.94433672253,17762
 D076_4L,enucleated,159,posteromedial visual area,0.659240050408,2471
 D076_4L,enucleated,161,Temporal association areas,2.35866596705,10469
 D076_4L,enucleated,185,Visceral area,1.56546865385,6355
-D076_4L,enucleated,198,"Orbital area, lateral part",4.16907411376,32501
-D076_4L,enucleated,243,"Retrosplenial area, dorsal part",4.00177461443,25434
-D076_4L,enucleated,246,"Retrosplenial area, ventral part",7.14377828117,47376
-D076_4L,enucleated,248,"Retrosplenial area, lateral agranular part",4.40453623245,20289
-D076_4L,enucleated,249,Ectorhinal area,2.38077232494,12786
-D076_4L,enucleated,280,Prelimbic area,3.33287880392,18559
-D076_4L,enucleated,284,Primary motor area,8.19022865596,34670
+D076_4L,enucleated,198,"Orbital area, lateral part",3.56875389448,15765
+D076_4L,enucleated,243,"Retrosplenial area, dorsal part",3.94918171998,21390
+D076_4L,enucleated,246,"Retrosplenial area, ventral part",5.83890369844,29416
+D076_4L,enucleated,248,"Retrosplenial area, lateral agranular part",4.35950297911,20045
+D076_4L,enucleated,249,Ectorhinal area,2.18318507773,9984
+D076_4L,enucleated,280,Prelimbic area,2.71215639955,11734
+D076_4L,enucleated,284,Primary motor area,8.18858889347,34663
 D076_4L,enucleated,288,Secondary motor area,7.9993595447,34197

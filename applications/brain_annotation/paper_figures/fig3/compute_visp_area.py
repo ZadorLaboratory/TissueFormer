@@ -23,7 +23,7 @@ import pandas as pd
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils import reflect_points_to_left, compute_flatmap_pixel_area_map, interpolate_pixel_area_to_grid
-from svc_plotting import SuppressOutput
+from svc_plotting import SuppressOutput, load_ccf_boundaries
 
 ROOT_DATA_PATH = os.environ["ROOT_DATA_PATH"]
 GROUP_SIZE = 32
@@ -50,37 +50,39 @@ D076_4L_PREDICTION_DIR = os.path.join(
 )
 
 
-def load_all_brain_data():
-    """Load coordinates and predictions for all 8 brains. Returns list of dicts."""
+def _load_control_brain(fold, display_name):
+    """Load one control brain's xy and predictions, releasing the dataset."""
+    import gc
     from datasets import load_from_disk
 
-    brains = []
+    fold_dir = f"fold{fold}_animal_name_class_weights2_{GROUP_SIZE}"
+    base = os.path.join(ROOT_DATA_PATH, "barseq", "annotation", fold_dir)
 
-    # Control brains
-    for fold, (animal_ds_name, display_name) in CONTROL_BRAINS.items():
-        fold_dir = f"fold{fold}_animal_name_class_weights2_{GROUP_SIZE}"
-        base = os.path.join(ROOT_DATA_PATH, "barseq", "annotation", fold_dir)
+    pred_dict = np.load(os.path.join(base, "test_brain_predictions_cells.npy"),
+                        allow_pickle=True).item()
+    predictions = pred_dict["predictions"]
+    indices = np.array(pred_dict["indices"])
 
-        pred_path = os.path.join(base, "test_brain_predictions_cells.npy")
-        pred_dict = np.load(pred_path, allow_pickle=True).item()
-        predictions = pred_dict["predictions"]
-        indices = np.array(pred_dict["indices"])
+    dataset_path = os.path.join(
+        ROOT_DATA_PATH, "barseq", "Chen2023",
+        f"train_test_barseq_all_exhausted_fold{fold}.dataset",
+    )
+    dataset = load_from_disk(dataset_path)
+    ccf = np.array(dataset["test"]["CCF_streamlines"])[indices]
+    xy = reflect_points_to_left(ccf[:, :2])
+    del dataset, ccf, pred_dict, indices
+    gc.collect()
 
-        dataset_path = os.path.join(
-            ROOT_DATA_PATH, "barseq", "Chen2023",
-            f"train_test_barseq_all_exhausted_fold{fold}.dataset",
-        )
-        dataset = load_from_disk(dataset_path)
-        ccf = np.array(dataset["test"]["CCF_streamlines"])[indices]
-        xy = reflect_points_to_left(ccf[:, :2])
+    print(f"  Loaded {display_name}: {len(predictions)} cells")
+    return {"name": display_name, "condition": "control",
+            "xy": xy, "predictions": predictions}
 
-        brains.append({
-            "name": display_name, "condition": "control",
-            "xy": xy, "predictions": predictions,
-        })
-        print(f"  Loaded {display_name}: {len(predictions)} cells")
 
-    # Enucleated brains (D077, D078, D079)
+def _load_enucleated_brains():
+    """Load D077/D078/D079 enucleated brains, releasing the dataset."""
+    import gc
+    from datasets import load_from_disk
+
     pred_dir = f"foldtest_enucleated_animal_name_class_weights2_{GROUP_SIZE}"
     pred_path = os.path.join(
         ROOT_DATA_PATH, "barseq", "annotation", pred_dir,
@@ -98,19 +100,28 @@ def load_all_brain_data():
     indices = np.array(pred_dict["indices"])
     animal_names = np.array(test_ds["animal_name"])[indices]
     ccf_streamlines = np.array(test_ds["CCF_streamlines"])[indices]
+    del dataset, test_ds, pred_dict, indices
+    gc.collect()
 
+    brains = []
     for animal in ENUCLEATED_ANIMALS:
         display_name = ENUCLEATED_DISPLAY[animal]
         mask = animal_names == animal
-        preds = predictions[mask]
+        preds = predictions[mask].copy()
         xy = reflect_points_to_left(ccf_streamlines[mask, :2])
-        brains.append({
-            "name": display_name, "condition": "enucleated",
-            "xy": xy, "predictions": preds,
-        })
+        brains.append({"name": display_name, "condition": "enucleated",
+                        "xy": xy, "predictions": preds})
         print(f"  Loaded {display_name}: {mask.sum()} cells")
+    del predictions, animal_names, ccf_streamlines
+    gc.collect()
+    return brains
 
-    # D076_4L
+
+def _load_d076_4l():
+    """Load D076_4L from single-brain pipeline output."""
+    import gc
+    from datasets import load_from_disk
+
     d076_pred = np.load(os.path.join(D076_4L_PREDICTION_DIR, "predictions.npy"),
                         allow_pickle=True).item()
     d076_ds = load_from_disk(os.path.join(D076_4L_PREDICTION_DIR, "tokenized.dataset"))
@@ -119,12 +130,22 @@ def load_all_brain_data():
     group_ccf = d076_ccf[d076_indices]
     ccf_mean = np.nanmean(group_ccf, axis=1)
     xy = reflect_points_to_left(ccf_mean[:, :2])
-    brains.append({
-        "name": "D076_4L", "condition": "enucleated",
-        "xy": xy, "predictions": d076_pred["predictions"],
-    })
-    print(f"  Loaded D076_4L: {len(d076_pred['predictions'])} groups")
+    predictions = d076_pred["predictions"]
+    del d076_ds, d076_ccf, group_ccf, d076_indices, d076_pred
+    gc.collect()
 
+    print(f"  Loaded D076_4L: {len(predictions)} groups")
+    return {"name": "D076_4L", "condition": "enucleated",
+            "xy": xy, "predictions": predictions}
+
+
+def load_all_brain_data():
+    """Load coordinates and predictions for all 8 brains serially."""
+    brains = []
+    for fold, (animal_ds_name, display_name) in CONTROL_BRAINS.items():
+        brains.append(_load_control_brain(fold, display_name))
+    brains.extend(_load_enucleated_brains())
+    brains.append(_load_d076_4l())
     return brains
 
 
@@ -159,6 +180,20 @@ def load_label_names():
     return {int(k): v for k, v in cfg["label_names"].items()}
 
 
+def compute_cortical_mask(X_grid):
+    """Return boolean mask: True for grid points inside any CCF boundary polygon."""
+    from matplotlib.path import Path
+
+    boundaries = load_ccf_boundaries()
+    inside = np.zeros(len(X_grid), dtype=bool)
+    for boundary in boundaries.values():
+        path = Path(boundary)
+        inside |= path.contains_points(X_grid)
+    print(f"  Cortical mask: {inside.sum()}/{len(inside)} grid points "
+          f"({100*inside.mean():.1f}%)")
+    return inside
+
+
 def fit_predict_and_release(xy, predictions, X_grid):
     """Fit a cuML SVC, predict on the grid, and release GPU memory."""
     import gc
@@ -184,18 +219,24 @@ def fit_predict_and_release(xy, predictions, X_grid):
     return grid_preds
 
 
-def compute_all_areas_from_grid_preds(all_grid_preds, pixel_area_per_point, label_names):
+def compute_all_areas_from_grid_preds(all_grid_preds, pixel_area_per_point,
+                                      label_names, cortical_mask):
     """Compute physical area for every region per brain from pre-computed grid predictions.
 
+    Only grid points inside the cortical mask are counted.
     Returns a DataFrame with columns: brain, condition, label, area_name, area_mm2, pixel_count.
     """
     results = []
     for name, info in all_grid_preds.items():
         preds = info["grid_preds"]
-        unique_labels = np.unique(preds)
+        # Mask to cortical region only
+        cortical_preds = preds[cortical_mask]
+        cortical_area = pixel_area_per_point[cortical_mask]
+
+        unique_labels = np.unique(cortical_preds)
         for label in unique_labels:
-            mask = preds == label
-            area_mm2 = pixel_area_per_point[mask].sum()
+            mask = cortical_preds == label
+            area_mm2 = cortical_area[mask].sum()
             results.append({
                 "brain": name,
                 "condition": info["condition"],
@@ -206,7 +247,7 @@ def compute_all_areas_from_grid_preds(all_grid_preds, pixel_area_per_point, labe
             })
 
         n_labels = len(unique_labels)
-        visp_area = pixel_area_per_point[preds == VISP_LABEL].sum()
+        visp_area = cortical_area[cortical_preds == VISP_LABEL].sum()
         print(f"    {name}: {n_labels} regions, VISp={visp_area:.4f} mm²")
 
     return pd.DataFrame(results)
@@ -328,15 +369,18 @@ BRAIN_ORDER = ["D076_1L", "D077_1L", "D078_1L", "D079_3L",
 HIGHER_VISUAL_LABELS = [113, 117, 120, 121, 123, 135, 136, 137, 138, 139, 159]
 
 
-def plot_diagnostic_svc_maps(all_grid_preds, grid_shape):
-    """Plot SVC prediction maps for all 8 brains on the shared grid."""
+def plot_diagnostic_svc_maps(all_grid_preds, grid_shape, cortical_mask):
+    """Plot SVC prediction maps for all 8 brains, masked to cortical region."""
+    mask_2d = cortical_mask.reshape(grid_shape)
     fig, axes = plt.subplots(2, 4, figsize=(20, 10))
     for ax, name in zip(axes.ravel(), BRAIN_ORDER):
-        preds = all_grid_preds[name]["grid_preds"].reshape(grid_shape)
-        cond = all_grid_preds[name]["condition"]
+        preds = all_grid_preds[name]["grid_preds"].reshape(grid_shape).astype(float)
+        preds[~mask_2d] = np.nan
         ax.imshow(preds, origin="lower", aspect="auto", cmap="tab20")
-        ax.set_title(f"{name} ({cond})\n{len(np.unique(preds))} labels")
-    plt.suptitle("SVC prediction maps on shared grid (all cuML)", fontsize=14)
+        n_labels = len(np.unique(preds[mask_2d].astype(int)))
+        cond = all_grid_preds[name]["condition"]
+        ax.set_title(f"{name} ({cond})\n{n_labels} labels")
+    plt.suptitle("SVC prediction maps — cortical mask (all cuML)", fontsize=14)
     plt.tight_layout()
     out = os.path.join(OUTPUT_DIR, "diagnostic_svc_maps.png")
     fig.savefig(out, dpi=150, bbox_inches="tight")
@@ -344,20 +388,22 @@ def plot_diagnostic_svc_maps(all_grid_preds, grid_shape):
     print(f"  Saved {out}")
 
 
-def plot_diagnostic_visp_hva(all_grid_preds, grid_shape):
-    """Plot VISp (blue) vs Higher Visual Areas (red) vs other (gray) for all brains."""
+def plot_diagnostic_visp_hva(all_grid_preds, grid_shape, cortical_mask):
+    """Plot VISp (blue) vs Higher Visual Areas (red) vs other (gray), masked."""
+    mask_2d = cortical_mask.reshape(grid_shape)
     fig, axes = plt.subplots(2, 4, figsize=(20, 10))
     for ax, name in zip(axes.ravel(), BRAIN_ORDER):
         preds = all_grid_preds[name]["grid_preds"].reshape(grid_shape)
-        rgb = np.ones((*preds.shape, 3)) * 0.9
-        rgb[preds == VISP_LABEL] = [0.3, 0.5, 0.9]
+        rgb = np.ones((*preds.shape, 3))  # white background
+        rgb[mask_2d] = 0.9  # gray for cortex
+        rgb[mask_2d & (preds == VISP_LABEL)] = [0.3, 0.5, 0.9]
         for lbl in HIGHER_VISUAL_LABELS:
-            rgb[preds == lbl] = [0.9, 0.3, 0.2]
+            rgb[mask_2d & (preds == lbl)] = [0.9, 0.3, 0.2]
         ax.imshow(rgb, origin="lower", aspect="auto")
-        visp_n = (preds == VISP_LABEL).sum()
-        hva_n = sum((preds == lbl).sum() for lbl in HIGHER_VISUAL_LABELS)
+        visp_n = (mask_2d & (preds == VISP_LABEL)).sum()
+        hva_n = sum((mask_2d & (preds == lbl)).sum() for lbl in HIGHER_VISUAL_LABELS)
         ax.set_title(f"{name}\nVISp={visp_n}px  HVA={hva_n}px")
-    plt.suptitle("VISp (blue) vs Higher Visual Areas (red) vs Other (gray)", fontsize=14)
+    plt.suptitle("VISp (blue) vs Higher Visual Areas (red) — cortical mask", fontsize=14)
     plt.tight_layout()
     out = os.path.join(OUTPUT_DIR, "diagnostic_visp_vs_hva.png")
     fig.savefig(out, dpi=150, bbox_inches="tight")
@@ -418,15 +464,18 @@ def main():
                 "grid_preds": grid_preds,
             }
 
+        print("Computing cortical mask from CCF boundaries...")
+        cortical_mask = compute_cortical_mask(X_grid)
+
         if args.diagnostics:
             grid_shape = (GRID_RESOLUTION, GRID_RESOLUTION)
             print("\nSaving diagnostic plots...")
-            plot_diagnostic_svc_maps(all_grid_preds, grid_shape)
-            plot_diagnostic_visp_hva(all_grid_preds, grid_shape)
+            plot_diagnostic_svc_maps(all_grid_preds, grid_shape, cortical_mask)
+            plot_diagnostic_visp_hva(all_grid_preds, grid_shape, cortical_mask)
 
         print("Computing all region areas...")
         df = compute_all_areas_from_grid_preds(
-            all_grid_preds, pixel_area_per_point.ravel(), label_names
+            all_grid_preds, pixel_area_per_point.ravel(), label_names, cortical_mask
         )
 
         df.to_csv(csv_path, index=False)
