@@ -418,6 +418,8 @@ def main():
                         help="Skip computation, just re-plot from existing all_area_results.csv")
     parser.add_argument("--diagnostics", action="store_true",
                         help="Save diagnostic SVC maps (requires full computation)")
+    parser.add_argument("--smooth-kernel", type=int, default=5,
+                        help="Smoothing kernel size for pixel area map (default: 5)")
     args = parser.parse_args()
 
     warnings.filterwarnings("ignore", module="cuml.*")
@@ -443,7 +445,8 @@ def main():
 
         print("Computing flatmap pixel area map...")
         flatmap_h5 = os.path.join(ROOT_DATA_PATH, "CCF_files", "flatmap_butterfly.h5")
-        pixel_area_map = compute_flatmap_pixel_area_map(flatmap_h5)
+        pixel_area_map = compute_flatmap_pixel_area_map(flatmap_h5, smooth_kernel=args.smooth_kernel)
+        print(f"  Smoothing kernel: {args.smooth_kernel}")
         area_density = interpolate_pixel_area_to_grid(pixel_area_map, xx0, xx1)
         pixel_area_per_point = (area_density * svc_dx * svc_dy) / 1e6
         print(f"  Mean pixel area: {np.nanmean(pixel_area_per_point[pixel_area_per_point > 0]):.6f} mm²")
