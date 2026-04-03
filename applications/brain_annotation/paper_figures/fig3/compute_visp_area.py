@@ -1,9 +1,14 @@
 """
-Compute VISp (primary visual cortex, label 110) area across all 7 brains
-using SVC decision boundary predictions on a uniform shared grid.
+Compute physical area of all brain regions across all 8 brains using SVC
+decision boundary predictions on a uniform shared grid.
 
 Control brains use pre-trained SVC models from each fold.
 Enucleated brains get per-brain SVC models fit from TissueFormer predictions.
+
+Outputs:
+  - all_area_results.csv: area (mm²) per region per brain
+  - visp_area_comparison.{png,pdf}: paired strip plot of VISp area
+  - visp_ratio_comparison.{png,pdf}: VISp / total higher visual areas ratio
 """
 
 import os
@@ -180,13 +185,21 @@ def compute_shared_grid(all_brains):
     return X_grid, xx0, xx1, (x_min, x_max, y_min, y_max)
 
 
-def compute_visp_areas(all_brains, X_grid, pixel_area_per_point):
-    """Predict on shared grid and compute VISp physical area for each brain.
+def load_label_names():
+    """Load label class ID -> area name mapping from config."""
+    import yaml
+    config_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "config", "data", "default.yaml"
+    )
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
+    return {int(k): v for k, v in cfg["label_names"].items()}
 
-    Parameters
-    ----------
-    pixel_area_per_point : np.ndarray
-        Physical area (mm²) per grid point, flattened to match X_grid rows.
+
+def compute_all_areas(all_brains, X_grid, pixel_area_per_point, label_names):
+    """Predict on shared grid and compute physical area for every region per brain.
+
+    Returns a DataFrame with columns: brain, condition, label, area_name, area_mm2, pixel_count.
     """
     results = []
     for name, info in all_brains.items():
@@ -196,62 +209,47 @@ def compute_visp_areas(all_brains, X_grid, pixel_area_per_point):
             preds = model.predict(X_grid)
         if hasattr(preds, "get"):
             preds = preds.get()
-        preds = np.asarray(preds)
+        preds = np.asarray(preds).astype(int)
 
-        visp_mask = preds == VISP_LABEL
-        visp_count = visp_mask.sum()
-        total_count = len(preds)
-        visp_area_mm2 = pixel_area_per_point[visp_mask].sum()
+        unique_labels = np.unique(preds)
+        for label in unique_labels:
+            mask = preds == label
+            area_mm2 = pixel_area_per_point[mask].sum()
+            results.append({
+                "brain": name,
+                "condition": info["condition"],
+                "label": int(label),
+                "area_name": label_names.get(label, f"unknown_{label}"),
+                "area_mm2": area_mm2,
+                "pixel_count": int(mask.sum()),
+            })
 
-        results.append({
-            "brain": name,
-            "condition": info["condition"],
-            "visp_pixels": int(visp_count),
-            "total_pixels": int(total_count),
-            "visp_area": visp_area_mm2,
-            "visp_fraction": visp_count / total_count,
-        })
-        print(f"    {name}: VISp pixels={visp_count}, area={visp_area_mm2:.4f} mm²")
+        n_labels = len(unique_labels)
+        visp_area = pixel_area_per_point[preds == VISP_LABEL].sum()
+        print(f"    {name}: {n_labels} regions, VISp={visp_area:.4f} mm²")
 
     return pd.DataFrame(results)
 
 
-def plot_visp_comparison(df):
-    """Paired strip plot with lines connecting littermates, means, and paired t-test."""
+def _paired_strip_plot(ctrl_vals, enuc_vals, litters, ylabel, filename):
+    """Generic paired strip plot with littermate lines, means, and paired t-test."""
     from scipy import stats
 
     plt.rcParams.update({
-        "font.size": 11,
-        "axes.titlesize": 12,
-        "axes.labelsize": 11,
-        "xtick.labelsize": 10,
-        "ytick.labelsize": 10,
-        "font.family": "sans-serif",
+        "font.size": 11, "axes.titlesize": 12, "axes.labelsize": 11,
+        "xtick.labelsize": 10, "ytick.labelsize": 10, "font.family": "sans-serif",
     })
 
     fig, ax = plt.subplots(figsize=(3.5, 4.5))
-
     colors = {"control": "#4878CF", "enucleated": "#E24A33"}
     x_ctrl, x_enuc = 0, 1
 
-    # Extract litter from brain name (e.g. "D076_1L" -> "D076")
-    df = df.copy()
-    df["litter"] = df["brain"].str[:4]
-
-    # Get paired values by litter
-    ctrl_df = df[df["condition"] == "control"].set_index("litter")
-    enuc_df = df[df["condition"] == "enucleated"].set_index("litter")
-    litters = sorted(ctrl_df.index.intersection(enuc_df.index))
-
-    ctrl_vals = ctrl_df.loc[litters, "visp_area"].values
-    enuc_vals = enuc_df.loc[litters, "visp_area"].values
-
-    # Draw connecting lines between littermates
+    # Connecting lines
     for c_val, e_val in zip(ctrl_vals, enuc_vals):
         ax.plot([x_ctrl, x_enuc], [c_val, e_val],
                 color="gray", linewidth=0.8, zorder=2, alpha=0.6)
 
-    # Individual points (no jitter — paired lines need fixed x)
+    # Points
     ax.scatter(np.full(len(ctrl_vals), x_ctrl), ctrl_vals,
                color=colors["control"], s=50, zorder=3, edgecolors="black", linewidths=0.5)
     ax.scatter(np.full(len(enuc_vals), x_enuc), enuc_vals,
@@ -265,10 +263,10 @@ def plot_visp_comparison(df):
 
     # Paired t-test
     t_stat, p_val = stats.ttest_rel(ctrl_vals, enuc_vals)
-    print(f"  paired t-test: t={t_stat:.3f}, p={p_val:.4f}")
+    print(f"  {filename} paired t-test: t={t_stat:.3f}, p={p_val:.4f}")
 
     # Significance bracket
-    y_max = df["visp_area"].max()
+    y_max = max(ctrl_vals.max(), enuc_vals.max())
     bracket_y = y_max * 1.08
     bar_y = y_max * 1.12
     ax.plot([0, 0, 1, 1], [bracket_y, bar_y, bar_y, bracket_y],
@@ -281,7 +279,7 @@ def plot_visp_comparison(df):
 
     ax.set_xticks([0, 1])
     ax.set_xticklabels(["Control", "Enucleated"])
-    ax.set_ylabel("VISp area (mm²)")
+    ax.set_ylabel(ylabel)
     ax.set_xlim(-0.5, 1.5)
     ax.set_ylim(0, y_max * 1.25)
     ax.spines["top"].set_visible(False)
@@ -289,65 +287,124 @@ def plot_visp_comparison(df):
 
     plt.tight_layout()
     for ext in ("png", "pdf"):
-        out_path = os.path.join(OUTPUT_DIR, f"visp_area_comparison.{ext}")
+        out_path = os.path.join(OUTPUT_DIR, f"{filename}.{ext}")
         fig.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved figure: {os.path.join(OUTPUT_DIR, 'visp_area_comparison.png')}")
+    print(f"  Saved: {os.path.join(OUTPUT_DIR, f'{filename}.png')}")
+
+
+def _get_paired_values(per_brain_df):
+    """Given a df with brain/condition/value columns, return paired ctrl/enuc arrays and litters."""
+    df = per_brain_df.copy()
+    df["litter"] = df["brain"].str[:4]
+    ctrl = df[df["condition"] == "control"].set_index("litter")
+    enuc = df[df["condition"] == "enucleated"].set_index("litter")
+    litters = sorted(ctrl.index.intersection(enuc.index))
+    return ctrl.loc[litters], enuc.loc[litters], litters
+
+
+# Labels for "higher visual areas" — those with "visual area" in the name, excluding VISp
+HIGHER_VISUAL_AREA_LABELS = [
+    113, 117, 120, 121, 123, 135, 136, 137, 138, 139, 159,
+]
+
+
+def plot_visp_comparison(df_all):
+    """Plot VISp area comparison from the full per-area DataFrame."""
+    visp = df_all[df_all["label"] == VISP_LABEL][["brain", "condition", "area_mm2"]].copy()
+    ctrl, enuc, litters = _get_paired_values(visp)
+    _paired_strip_plot(ctrl["area_mm2"].values, enuc["area_mm2"].values, litters,
+                       "VISp area (mm²)", "visp_area_comparison")
+
+
+def plot_visp_ratio(df_all):
+    """Plot VISp / (VISp + higher visual areas) ratio."""
+    visual_labels = [VISP_LABEL] + HIGHER_VISUAL_AREA_LABELS
+    vis_df = df_all[df_all["label"].isin(visual_labels)].copy()
+
+    # Sum area per brain for VISp vs all visual
+    visp_per_brain = df_all[df_all["label"] == VISP_LABEL].groupby(
+        ["brain", "condition"])["area_mm2"].sum().reset_index().rename(columns={"area_mm2": "visp"})
+    total_vis_per_brain = vis_df.groupby(
+        ["brain", "condition"])["area_mm2"].sum().reset_index().rename(columns={"area_mm2": "total_vis"})
+
+    merged = visp_per_brain.merge(total_vis_per_brain, on=["brain", "condition"])
+    merged["visp_ratio"] = merged["visp"] / merged["total_vis"]
+
+    print("\n  VISp ratio (VISp / all visual areas):")
+    for _, row in merged.iterrows():
+        print(f"    {row['brain']}: {row['visp_ratio']:.3f}  "
+              f"(VISp={row['visp']:.2f}, total={row['total_vis']:.2f} mm²)")
+
+    ctrl, enuc, litters = _get_paired_values(merged)
+    _paired_strip_plot(ctrl["visp_ratio"].values, enuc["visp_ratio"].values, litters,
+                       "VISp / visual areas", "visp_ratio_comparison")
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--plot-only", action="store_true",
+                        help="Skip computation, just re-plot from existing all_area_results.csv")
+    args = parser.parse_args()
+
     warnings.filterwarnings("ignore", module="cuml.*")
 
-    print("Loading control brains...")
-    control_brains = load_control_coords_and_models()
+    csv_path = os.path.join(OUTPUT_DIR, "all_area_results.csv")
 
-    print("Loading enucleated brains...")
-    enucleated_brains = load_enucleated_coords_and_fit_models()
+    if args.plot_only:
+        print(f"Loading existing results from {csv_path}...")
+        df = pd.read_csv(csv_path)
+    else:
+        print("Loading control brains...")
+        control_brains = load_control_coords_and_models()
 
-    print("Loading D076_4L...")
-    d076_4l = load_d076_4l()
+        print("Loading enucleated brains...")
+        enucleated_brains = load_enucleated_coords_and_fit_models()
 
-    all_brains = {**control_brains, **enucleated_brains, **d076_4l}
+        print("Loading D076_4L...")
+        d076_4l = load_d076_4l()
 
-    print("Computing shared grid...")
-    X_grid, xx0, xx1, bounds = compute_shared_grid(all_brains)
-    x_min, x_max, y_min, y_max = bounds
-    svc_dx = (x_max - x_min) / GRID_RESOLUTION
-    svc_dy = (y_max - y_min) / GRID_RESOLUTION
-    print(f"  Grid: {GRID_RESOLUTION}x{GRID_RESOLUTION}, SVC pixel={svc_dx:.4f}x{svc_dy:.4f} flatmap px")
-    print(f"  Bounds: x=[{x_min:.1f}, {x_max:.1f}], y=[{y_min:.1f}, {y_max:.1f}]")
+        all_brains = {**control_brains, **enucleated_brains, **d076_4l}
 
-    print("Computing flatmap pixel area map...")
-    flatmap_h5 = os.path.join(ROOT_DATA_PATH, "CCF_files", "flatmap_butterfly.h5")
-    pixel_area_map = compute_flatmap_pixel_area_map(flatmap_h5)
-    # Interpolate to SVC grid: µm² density per native pixel at each grid point
-    area_density = interpolate_pixel_area_to_grid(pixel_area_map, xx0, xx1)
-    # Scale by SVC pixel area (in native-pixel units) and convert µm² -> mm²
-    pixel_area_per_point = (area_density * svc_dx * svc_dy) / 1e6  # mm² per grid point
-    print(f"  Mean pixel area: {np.nanmean(pixel_area_per_point[pixel_area_per_point > 0]):.6f} mm²")
+        print("Computing shared grid...")
+        X_grid, xx0, xx1, bounds = compute_shared_grid(all_brains)
+        x_min, x_max, y_min, y_max = bounds
+        svc_dx = (x_max - x_min) / GRID_RESOLUTION
+        svc_dy = (y_max - y_min) / GRID_RESOLUTION
+        print(f"  Grid: {GRID_RESOLUTION}x{GRID_RESOLUTION}, SVC pixel={svc_dx:.4f}x{svc_dy:.4f} flatmap px")
+        print(f"  Bounds: x=[{x_min:.1f}, {x_max:.1f}], y=[{y_min:.1f}, {y_max:.1f}]")
 
-    print("Computing VISp areas...")
-    df = compute_visp_areas(all_brains, X_grid, pixel_area_per_point.ravel())
+        print("Computing flatmap pixel area map...")
+        flatmap_h5 = os.path.join(ROOT_DATA_PATH, "CCF_files", "flatmap_butterfly.h5")
+        pixel_area_map = compute_flatmap_pixel_area_map(flatmap_h5)
+        area_density = interpolate_pixel_area_to_grid(pixel_area_map, xx0, xx1)
+        pixel_area_per_point = (area_density * svc_dx * svc_dy) / 1e6
+        print(f"  Mean pixel area: {np.nanmean(pixel_area_per_point[pixel_area_per_point > 0]):.6f} mm²")
 
-    # Print results table
-    print("\n" + "=" * 70)
-    print(df.to_string(index=False))
-    print("=" * 70)
+        label_names = load_label_names()
 
-    # Summary stats
-    ctrl = df[df["condition"] == "control"]["visp_area"]
-    enuc = df[df["condition"] == "enucleated"]["visp_area"]
+        print("Computing all region areas...")
+        df = compute_all_areas(all_brains, X_grid, pixel_area_per_point.ravel(), label_names)
+
+        df.to_csv(csv_path, index=False)
+        print(f"\nSaved CSV: {csv_path} ({len(df)} rows)")
+
+    # VISp summary
+    visp = df[df["label"] == VISP_LABEL]
+    ctrl = visp[visp["condition"] == "control"]["area_mm2"]
+    enuc = visp[visp["condition"] == "enucleated"]["area_mm2"]
     print(f"\nControl mean VISp area:     {ctrl.mean():.4f} ± {ctrl.std():.4f} mm²")
     print(f"Enucleated mean VISp area:  {enuc.mean():.4f} ± {enuc.std():.4f} mm²")
     if ctrl.mean() > 0:
         print(f"Ratio (enucleated/control): {enuc.mean() / ctrl.mean():.3f}")
 
-    # Save outputs
-    csv_path = os.path.join(OUTPUT_DIR, "visp_area_results.csv")
-    df.to_csv(csv_path, index=False)
-    print(f"\nSaved CSV: {csv_path}")
-
+    print("\nPlotting VISp comparison...")
     plot_visp_comparison(df)
+
+    print("\nPlotting VISp ratio...")
+    plot_visp_ratio(df)
+
     print("Done!")
 
 
